@@ -5,9 +5,11 @@ Optionally joins the cohort plan TSV to break down **primary vs reserve** and st
 
 Writes **Markdown** + **JSON** under ``--out-dir`` (default ``outputs/cohort_fetch_report``).
 
-    python pipeline/10_cohort_summarize_fetch.py
-    python pipeline/10_cohort_summarize_fetch.py --log data/processed/images/cohort_image_fetch.log
-    python pipeline/10_cohort_summarize_fetch.py --plan data/processed/cohorts/multimodal_plan_n50000_seed42.tsv --target-primary 50000
+**Inputs:** existing ``cohort_image_fetch.log`` (and optionally the cohort plan TSV). Safe to re-run anytime.
+
+    python reporting/report_cohort_fetch_summary.py
+    python reporting/report_cohort_fetch_summary.py --log data/processed/images/cohort_image_fetch.log
+    python reporting/report_cohort_fetch_summary.py --plan data/processed/cohorts/multimodal_plan_n50000_seed42.tsv --target-primary 50000
 """
 
 from __future__ import annotations
@@ -63,7 +65,7 @@ def _load_plan_index(plan_path: Path) -> dict[str, dict[str, str]]:
     return out
 
 
-# Align with ``pipeline/08_cohort_fetch_images.py`` ``_download_one`` (literal ``detail`` values + ``type(e).__name__``).
+# Align with ``pipeline/06_cohort_fetch_images.py`` ``_download_one`` (literal ``detail`` values + ``type(e).__name__``).
 _FAILURE_DETAIL_GLOSSARY: dict[str, str] = {
     "(empty)": "No text was stored in the log’s `detail` column (unexpected for normal runs).",
     "reddit_placeholder_sha256": (
@@ -71,7 +73,7 @@ _FAILURE_DETAIL_GLOSSARY: dict[str, str] = {
         "or CDN “missing image” payloads). The URL returned *something*, but it is treated as unusable for training."
     ),
     "too_small": (
-        "HTTP response body was smaller than 512 bytes (`08_cohort_fetch_images.py`). Often an error page, "
+        "HTTP response body was smaller than 512 bytes (`06_cohort_fetch_images.py`). Often an error page, "
         "empty payload, or truncated response rather than a real image."
     ),
     "pil_verify_failed": (
@@ -126,7 +128,7 @@ def _failure_detail_explanation(detail: str) -> str:
         )
     return (
         "Free-text or uncommon marker. Inspect the raw log line for the full `detail` string, or search "
-        "`08_cohort_fetch_images.py` for where `detail` is set."
+        "`06_cohort_fetch_images.py` for where `detail` is set."
     )
 
 
@@ -516,7 +518,7 @@ def main() -> int:
 
     lines.append("## Failure `detail` field\n")
     lines.append(
-        "The cohort fetcher (`pipeline/08_cohort_fetch_images.py`, `_download_one`) writes either a **fixed string** "
+        "The cohort fetcher (`pipeline/06_cohort_fetch_images.py`, `_download_one`) writes either a **fixed string** "
         "after local checks (size, SHA blocklist, PIL verify) or **`type(e).__name__`** from the HTTP stack "
         "(typically `requests` / `urllib3`). The log does not store full stack traces or HTTP status lines for "
         "most errors.\n"

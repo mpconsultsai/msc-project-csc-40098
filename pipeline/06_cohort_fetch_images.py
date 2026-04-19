@@ -1,5 +1,5 @@
 """
-Download images listed in a cohort plan TSV (from ``07_cohort_build_plan.py``).
+Download images listed in a cohort plan TSV (from ``05_cohort_build_plan.py``).
 
 Writes one file per row under ``data/processed/images/`` using a **sanitised** ``sample_id`` as the
 stem (e.g. ``fd_9b85vf.jpg``). **Single-threaded**, append-only log, idempotent **resume**: any
@@ -9,10 +9,10 @@ is the only resume signal (no scanning the image folder). Stale URLs are assumed
 
 Paths resolve from the project root (parent of ``pipeline/``).
 
-    python -u pipeline/08_cohort_fetch_images.py --plan-tsv data/processed/cohorts/multimodal_plan_n50000_seed42.tsv
-    python -u pipeline/08_cohort_fetch_images.py --plan-tsv ... --limit 100
-    python -u pipeline/08_cohort_fetch_images.py --plan-tsv ... --stop-after-ok 50000
-    python -u pipeline/08_cohort_fetch_images.py --plan-tsv ... --force
+    python -u pipeline/06_cohort_fetch_images.py --plan-tsv data/processed/cohorts/multimodal_plan_n50000_seed42.tsv
+    python -u pipeline/06_cohort_fetch_images.py --plan-tsv ... --limit 100
+    python -u pipeline/06_cohort_fetch_images.py --plan-tsv ... --stop-after-ok 50000
+    python -u pipeline/06_cohort_fetch_images.py --plan-tsv ... --force
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_OUT_DIR = Path("data/processed/images")
 DEFAULT_PLAN = Path("data/processed/cohorts/multimodal_plan_n50000_seed42.tsv")
-DEFAULT_BLOCKLIST = Path("pipeline/08_cohort_reddit_placeholder_sha256.txt")
+DEFAULT_BLOCKLIST = Path("cohort_reddit_placeholder_sha256.txt")
 
 _FILENAME_BAD = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 

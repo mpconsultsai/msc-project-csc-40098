@@ -94,7 +94,7 @@ The following figures are a **point-in-time snapshot** from this machine (**2026
 | Distinct `news_id` with `empty_body` (at least once) | 14 |
 | Source/label mix in this snapshot | all events `politifact/fake` (crawl had not finished other splits yet) |
 
-**Analyse / clean the failure log (scripts in repo):** `pipeline/03_qa_fnn_dedupe_crawl_failures.py` (dedupe by `news_id`, keep latest `ts`), then `pipeline/04_qa_fnn_visualize_crawl_failures.py` for charts under `outputs/fnn_failure_viz/`. For tabular summaries, use **`notebooks/fakenews_preprocessing_eda.ipynb`** or ad-hoc Python/pandas on `crawl_failures.jsonl`.
+**Analyse / clean the failure log (scripts in repo):** `pipeline/03_qa_fnn_dedupe_crawl_failures.py` (dedupe by `news_id`, keep latest `ts`). For tabular summaries or charts, use **`notebooks/fakenews_preprocessing_eda.ipynb`** or ad-hoc Python/pandas on `crawl_failures.jsonl`.
 
 **Regenerate successful JSON count (PowerShell):**
 
@@ -184,7 +184,7 @@ The working unified file is **`data/fakenews.tsv`** (typically **gitignored** at
 - **Include `image_ref` whenever a URL can be chosen** from the source row (Fakeddit column or FNN `news content.json`). If there is no candidate, leave empty and set **`has_image_ref = false`**.
 - **Separate “reference exists” from “usable for training”:** many URLs will 404, return HTML, or be 1×1 tracking pixels. Use **`image_download_ok`** (and optionally log failures to a JSONL like the article crawl) after you fetch bytes to disk.
 - **Conversion for model input is a training-pipeline concern, not implied by flags:** at load time, typical steps include decode → **RGB** → resize/crop to backbone input (e.g. 224×224) → **normalisation** (ImageNet mean/std or backbone defaults). **`image_download_ok`** means you have a **valid raster file** (or raw bytes) suitable for those transforms; it does **not** mean tensors are prebuilt. You only need an extra column (e.g. `image_preprocessed_path`) or a **`image_training_ready`** boolean if you **materialise** fixed-size crops or tensor caches on disk for reproducibility or speed—otherwise keep preprocessing **deterministic in code** and avoid duplicating “ready for ResNet” state in the TSV.
-- **Multimodal cohort definition:** for strict text+image experiments, filter rows with **`has_image_ref`** and evidence of a successful fetch (e.g. **`cohort_multimodal_image_ok`** / local path columns after the cohort pipeline — see §7). The **final gated training export** for this project is **`data/fake_news_final.tsv`** (option-1 score ≥ 75). Report **counts before and after** each gate per `dataset` in methods/limitations.
+- **Multimodal cohort definition:** for strict text+image experiments, filter rows with **`has_image_ref`** and evidence of a successful fetch (e.g. **`cohort_multimodal_image_ok`** / local path columns after the cohort pipeline — see §7). The **final gated training export** for this project is **`data/fake_news_final.tsv`** (validity score ≥ 75). Report **counts before and after** each gate per `dataset` in methods/limitations.
 
 **Evaluation clarity:**
 
@@ -202,8 +202,8 @@ The working unified file is **`data/fakenews.tsv`** (typically **gitignored** at
 | FNN `crawl_failures.jsonl` | Yes | — |
 | Fakeddit TSVs on Drive | No | Downloaded |
 | `data/fakenews.tsv` (unified) | Yes — produced by **your** consolidation step (see §7) | Fakeddit TSVs + FNN crawl outputs |
-| Enrichment columns (`image_option1_*`, `cohort_*`) | Yes — merge scripts in §7 | After cohort fetch + option-1 QC |
-| `data/fake_news_final.tsv` | Yes — `14_cohort_export_final_tsv.py` | Gated subset for training |
+| Enrichment columns (`image_option1_*`, `cohort_*`) | Yes — merge scripts in §7 | After cohort fetch + image validation |
+| `data/fake_news_final.tsv` | Yes — `11_cohort_export_final_tsv.py` | Gated subset for training |
 
 ---
 
@@ -222,7 +222,7 @@ The working unified file is **`data/fakenews.tsv`** (typically **gitignored** at
 
 ### 7.2 Base table: `data/fakenews.tsv`
 
-The unified TSV must match the **§4** schema (at least the columns you use for modelling). **Build or refresh** it with **`pipeline/05_consolidate_fakenews_tsv.py`** (`all` | `fakeddit` | `fakenewsnet`), which reads Fakeddit multimodal TSVs under `v2_text_metadata/` and FakeNewsNet `news content.json` trees (and index CSVs for URLs), and omits FNN rows listed in **`crawl_failures.jsonl`**. Alternatively, restore rows from a backed-up `fakenews.tsv`. **`01_acquire_fakenewsnet_crawl.py`** can run `05_consolidate_fakenews_tsv.py all` after a crawl when that script is present.
+The unified TSV must match the **§4** schema (at least the columns you use for modelling). **Build or refresh** it with **`pipeline/04_consolidate_fakenews_tsv.py`** (`all` | `fakeddit` | `fakenewsnet`), which reads Fakeddit multimodal TSVs under `v2_text_metadata/` and FakeNewsNet `news content.json` trees (and index CSVs for URLs), and omits FNN rows listed in **`crawl_failures.jsonl`**. Alternatively, restore rows from a backed-up `fakenews.tsv`. **`01_acquire_fakenewsnet_crawl.py`** can run `04_consolidate_fakenews_tsv.py all` after a crawl when that script is present.
 
 All **cohort** steps below **assume** `data/fakenews.tsv` already exists at the project root.
 
@@ -243,53 +243,46 @@ Stage prefixes match **`pipeline/README.md`**. Names below are **basename only**
 | Script | Role |
 |--------|------|
 | `03_qa_fnn_dedupe_crawl_failures.py` | Dedupe `crawl_failures.jsonl` (latest `ts` per id). |
-| `04_qa_fnn_visualize_crawl_failures.py` | PNG summaries → `outputs/fnn_failure_viz/`. |
 
 **Consolidation** (build unified `data/fakenews.tsv` once Fakeddit + FNN inputs exist)
 
 | Script | Role |
 |--------|------|
-| `05_consolidate_fakenews_tsv.py` | Merge Fakeddit multimodal TSVs + FNN `news content.json` into `data/fakenews.tsv` (see §7.2). |
-
-**Optional full-table image fetch** (not the primary ~50k cohort path; rationale may be recorded in a local `documents/` notes file if you keep one — that folder is gitignored by default)
-
-| Script | Role |
-|--------|------|
-| `06_images_full_table_fetch.py` | Fetch images for many rows into `data/processed/images/` using a working copy of the TSV; canonical `data/fakenews.tsv` unchanged unless you copy results back manually. |
+| `04_consolidate_fakenews_tsv.py` | Merge Fakeddit multimodal TSVs + FNN `news content.json` into `data/fakenews.tsv` (see §7.2). |
 
 **Cohort multimodal pipeline** (primary path for the stratified ~50k image cohort)
 
 | Script | Role |
 |--------|------|
-| `07_cohort_build_plan.py` | Build stratified plan TSV (e.g. `data/processed/cohorts/multimodal_plan_n50000_seed42.tsv`). |
-| `08_cohort_fetch_images.py` | Download images for plan rows; append `data/processed/images/cohort_image_fetch.log`. Uses `08_cohort_reddit_placeholder_sha256.txt`. |
-| `09_cohort_dedupe_fetch_log.py` | Optional: dedupe cohort log after parallel mistakes. |
-| `10_cohort_summarize_fetch.py` | `outputs/cohort_fetch_report/` (`.md` + `.json`). |
-| `11_cohort_validate_images_option1.py` | Option-1 QC → `outputs/cohort_image_validation/`. |
-| `12_cohort_merge_option1_into_fakenews.py` | Adds `image_option1_*` columns to `data/fakenews.tsv`. |
-| `13_cohort_merge_fetch_log_into_fakenews.py` | Adds `cohort_image_*` / `cohort_multimodal_image_ok` columns. |
-| `14_cohort_export_final_tsv.py` | Writes `data/fake_news_final.tsv` (default: score ≥ 75). |
-| `15_cohort_summarize_final.py` | `outputs/fake_news_final_report/` (`.md` + `.json`). |
+| `05_cohort_build_plan.py` | Build stratified plan TSV (e.g. `data/processed/cohorts/multimodal_plan_n50000_seed42.tsv`). |
+| `06_cohort_fetch_images.py` | Download images for plan rows; append `data/processed/images/cohort_image_fetch.log`. Uses `cohort_reddit_placeholder_sha256.txt` (project root). |
+| `07_cohort_dedupe_fetch_log.py` | Optional: dedupe cohort log after parallel mistakes. |
+| `08_cohort_image_validation.py` | Heuristic image QC → `data/processed/cohorts/image_validation/` (`cohort_image_validation.tsv`). |
+| `09_cohort_merge_image_validation_into_fakenews.py` | Adds `image_option1_*` columns to `data/fakenews.tsv`. |
+| `10_cohort_merge_fetch_log_into_fakenews.py` | Adds `cohort_image_*` / `cohort_multimodal_image_ok` columns. |
+| `11_cohort_export_final_tsv.py` | Writes `data/fake_news_final.tsv` (default: score ≥ 75). |
 
-**EDA / charts**
+**Reporting / EDA (optional; see `reporting/README.md`)**
 
 | Script | Role |
 |--------|------|
-| `16_eda_visualize_fakenews_tsv.py` | Charts + `outputs/fakenews_viz/index.html` from `data/fakenews.tsv`. |
+| `reporting/report_cohort_fetch_summary.py` | `outputs/cohort_fetch_report/` from `cohort_image_fetch.log` (+ optional plan). |
+| `reporting/report_fake_news_final.py` | `outputs/fake_news_final_report/` from `fake_news_final.tsv`. |
+| `reporting/report_fakenews_eda.py` | Charts + `outputs/fakenews_viz/index.html` from `data/fakenews.tsv`. |
 | `notebooks/fakenews_preprocessing_eda.ipynb` | Interactive profiling, FNN vs crawl stats, Fakeddit quality. |
 
 ### 7.4 Reproducible order (cohort multimodal, after `data/fakenews.tsv` exists)
 
 Run from the project root (adjust paths if you change defaults):
 
-1. **`python pipeline/07_cohort_build_plan.py`** — create/refresh the cohort plan TSV (set `--input`, `--n`, `--seed` as needed).
-2. **`python pipeline/08_cohort_fetch_images.py`** — fetch until target successes (e.g. `--stop-after-ok 50000`). Uses plan + blocklist.
-3. *(Optional)* **`python pipeline/09_cohort_dedupe_fetch_log.py`** — if the log contains duplicate `sample_id` lines.
-4. **`python pipeline/10_cohort_summarize_fetch.py`** — refresh fetch report.
-5. **`python pipeline/11_cohort_validate_images_option1.py`** — full validation sweep (`--resume` as needed); then **`python pipeline/11_cohort_validate_images_option1.py --sort-only`** if you only need re-sorting.
-6. **`python pipeline/12_cohort_merge_option1_into_fakenews.py`** — merge scores into `fakenews.tsv` (pass **`--no-backup`** to skip writing `*.option1_merge.bak`).
-7. **`python pipeline/13_cohort_merge_fetch_log_into_fakenews.py`** — merge fetch paths/status into `fakenews.tsv` (pass **`--no-backup`** to skip `*.cohort_fetch_merge.bak`).
-8. **`python pipeline/14_cohort_export_final_tsv.py`** — write `fake_news_final.tsv`.
-9. **`python pipeline/15_cohort_summarize_final.py`** — refresh final summary report.
+1. **`python pipeline/05_cohort_build_plan.py`** — create/refresh the cohort plan TSV (set `--input`, `--n`, `--seed` as needed).
+2. **`python pipeline/06_cohort_fetch_images.py`** — fetch until target successes (e.g. `--stop-after-ok 50000`). Uses plan + blocklist.
+3. *(Optional)* **`python pipeline/07_cohort_dedupe_fetch_log.py`** — if the log contains duplicate `sample_id` lines.
+4. **`python pipeline/08_cohort_image_validation.py`** — full validation sweep (`--resume` as needed); then **`python pipeline/08_cohort_image_validation.py --sort-only`** if you only need re-sorting.
+5. **`python pipeline/09_cohort_merge_image_validation_into_fakenews.py`** — merge scores into `fakenews.tsv` (pass **`--no-backup`** to skip writing `*.image_validation_merge.bak`).
+6. **`python pipeline/10_cohort_merge_fetch_log_into_fakenews.py`** — merge fetch paths/status into `fakenews.tsv` (pass **`--no-backup`** to skip `*.cohort_fetch_merge.bak`).
+7. **`python pipeline/11_cohort_export_final_tsv.py`** — write `fake_news_final.tsv`.
+
+*(Optional reporting, any time after the relevant inputs exist:)* **`python reporting/report_cohort_fetch_summary.py`**, **`python reporting/report_fake_news_final.py`**, **`python reporting/report_fakenews_eda.py`** — see **`reporting/README.md`**.
 
 **Data layout and clone commands:** **`DATA_LAYOUT.md`**.

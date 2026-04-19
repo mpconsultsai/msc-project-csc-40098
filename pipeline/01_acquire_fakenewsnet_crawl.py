@@ -18,7 +18,7 @@ Failures are appended to ``<out>/crawl_failures.jsonl`` (one JSON object per lin
 use ``--retry-known-failures`` to fetch them again. Successful skips when using ``--resume`` are not logged
 unless you pass ``--log-skipped``.
 
-When the crawl run **finishes**, if ``pipeline/05_consolidate_fakenews_tsv.py`` exists, ``all`` is invoked to refresh
+When the crawl run **finishes**, if ``pipeline/04_consolidate_fakenews_tsv.py`` exists, ``all`` is invoked to refresh
 ``data/fakenews.tsv`` (Fakeddit + FakeNewsNet image-ref rows). If that script is absent (common in this repo),
 pass ``--no-consolidate-image-refs`` or build ``data/fakenews.tsv`` separately per ``pipeline/DATASETS_OVERVIEW.md``.
 FNN rows from consolidation **exclude** keys still listed as failed in the failure log, use a **blank**
@@ -257,13 +257,13 @@ def main() -> int:
         "--image-refs-out",
         type=Path,
         default=Path("data/fakenews.tsv"),
-        help="Output path for 05_consolidate_fakenews_tsv.py all (project-relative; default data/fakenews.tsv).",
+        help="Output path for 04_consolidate_fakenews_tsv.py all (project-relative; default data/fakenews.tsv).",
     )
     parser.add_argument(
         "--consolidate-fakeddit-root",
         type=Path,
         default=Path("data/processed/fakeddit/v2_text_metadata"),
-        help="Fakeddit root passed to 05_consolidate_fakenews_tsv.py all as --input-root.",
+        help="Fakeddit root passed to 04_consolidate_fakenews_tsv.py all as --input-root.",
     )
     args = parser.parse_args()
 
@@ -453,10 +453,10 @@ def main() -> int:
     if not args.no_consolidate_image_refs:
         tsv_out = _resolve_project_path(args.image_refs_out, root)
         fakeddit_root = _resolve_project_path(args.consolidate_fakeddit_root, root)
-        script = root / "pipeline" / "05_consolidate_fakenews_tsv.py"
+        script = root / "pipeline" / "04_consolidate_fakenews_tsv.py"
         if not script.is_file():
             print(
-                "Skipping image-ref consolidation: pipeline/05_consolidate_fakenews_tsv.py not found. "
+                "Skipping image-ref consolidation: pipeline/04_consolidate_fakenews_tsv.py not found. "
                 "Use --no-consolidate-image-refs to silence this, or add that script.",
                 file=sys.stderr,
             )
@@ -478,7 +478,7 @@ def main() -> int:
             proc = subprocess.run(cmd, cwd=str(root))
             if proc.returncode != 0:
                 print(
-                    f"Warning: 05_consolidate_fakenews_tsv.py all exited {proc.returncode}",
+                    f"Warning: 04_consolidate_fakenews_tsv.py all exited {proc.returncode}",
                     file=sys.stderr,
                 )
 

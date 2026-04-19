@@ -14,7 +14,7 @@ Output TSV (default ``data/processed/cohorts/multimodal_plan_n{N}_seed{SEED}.tsv
 
     dataset, label_binary, split_official, sample_id, image_ref, stratum_key, plan_role, stratum_order
 
-**Next step:** run ``08_cohort_fetch_images.py`` on this plan.
+**Next step:** run ``06_cohort_fetch_images.py`` on this plan.
 
 **Row order:** the full plan is **shuffled** with the same ``--seed`` after rows are built. That avoids
 listing one entire corpus (e.g. all Fakeddit primary+reserve) before another when ``fakenews.tsv`` is

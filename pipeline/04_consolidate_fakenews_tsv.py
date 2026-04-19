@@ -7,14 +7,14 @@ to refresh the unified table. **01** can invoke ``all`` automatically when this 
 
 **Schema:** see ``pipeline/DATASETS_OVERVIEW.md`` §4. ``label_binary`` is ``0``/``1`` strings (1 = fake).
 
-    python pipeline/05_consolidate_fakenews_tsv.py all \\
+    python pipeline/04_consolidate_fakenews_tsv.py all \\
         --input-root data/processed/fakeddit/v2_text_metadata \\
         --collected data/processed/fakenewsnet \\
         --failure-log data/processed/fakenewsnet/crawl_failures.jsonl \\
         --out data/fakenews.tsv
 
-    python pipeline/05_consolidate_fakenews_tsv.py fakeddit --out data/fakenews.tsv
-    python pipeline/05_consolidate_fakenews_tsv.py fakenewsnet --collected data/processed/fakenewsnet --out data/fakenews.tsv
+    python pipeline/04_consolidate_fakenews_tsv.py fakeddit --out data/fakenews.tsv
+    python pipeline/04_consolidate_fakenews_tsv.py fakenewsnet --collected data/processed/fakenewsnet --out data/fakenews.tsv
 
 Paths are relative to the **project root** (parent of ``pipeline/``).
 """
@@ -30,7 +30,7 @@ from typing import Any, Iterable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-# Fakeddit multimodal filenames → split_official (matches ``07_cohort_build_plan`` expectations).
+# Fakeddit multimodal filenames → split_official (matches ``05_cohort_build_plan`` expectations).
 _FAKEDDIT_SPLIT: dict[str, str] = {
     "multimodal_train.tsv": "train",
     "multimodal_validate.tsv": "validation",
@@ -124,6 +124,10 @@ def _pick_image_ref(article: dict[str, Any]) -> str:
 
 def _load_fnn_index(dataset_dir: Path) -> dict[tuple[str, str, str], dict[str, str]]:
     """(source, label, id) -> {news_url, title} from official CSVs."""
+    try:
+        csv.field_size_limit(sys.maxsize)
+    except OverflowError:
+        csv.field_size_limit(2**31 - 1)
     out: dict[tuple[str, str, str], dict[str, str]] = {}
     if not dataset_dir.is_dir():
         return out
