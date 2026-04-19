@@ -91,7 +91,9 @@ datasets/
 *.npz
 *.npy
 
-# Common output dirs (outputs/ is tracked so report HTML/PNGs can be committed if desired)
+# Optional notebook/report exports (regenerate from notebooks if needed)
+outputs/
+# Common output dirs
 results/
 predictions/
 checkpoints/
