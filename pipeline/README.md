@@ -4,7 +4,7 @@ Numbered Python entrypoints live in **`pipeline/`** (project root). Run from the
 
 Names are ordered **01–11** by typical pipeline position. **Cohort** steps (05–11) assume `data/fakenews.tsv` already exists; see **`pipeline/DATASETS_OVERVIEW.md`** §7.2.
 
-**Reports and charts** (optional, any time after inputs exist) are in **`reporting/`** — see **`reporting/README.md`**.
+**Interactive reporting / EDA** (optional, any time after inputs exist) is in **`notebooks/fakenews_preprocessing_eda.ipynb`** — see **`reporting/README.md`**.
 
 ## What is actually required?
 
@@ -15,7 +15,7 @@ Names are ordered **01–11** by typical pipeline position. **Cohort** steps (05
 | **Stratified multimodal cohort → `fake_news_final.tsv`** (thesis path) | **05 → 06** (plus **`cohort_reddit_placeholder_sha256.txt`** at project root) → **08 → 09 → 10 → 11**. Optional: **07** if the fetch log has duplicate `sample_id`s. |
 | **Raw corpora only** | **01** (FakeNewsNet crawl) and/or **02** (Fakeddit download), depending which sources you use. |
 | **FNN crawl hygiene** | **03** (dedupe failure log) — optional. |
-| **Fetch / final / EDA reports** | **`reporting/report_*.py`** — optional; see **`reporting/README.md`**. |
+| **Fetch / final / EDA exploration** | **`notebooks/fakenews_preprocessing_eda.ipynb`** — optional; see **`reporting/README.md`**. |
 
 **Minimal cohort chain (data-producing):** `05` → `06` → `08` → `09` → `10` → `11`.  
 **Supporting file:** `cohort_reddit_placeholder_sha256.txt` (project root; referenced by `06`, not executed).

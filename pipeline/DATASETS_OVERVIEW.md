@@ -264,12 +264,9 @@ Stage prefixes match **`pipeline/README.md`**. Names below are **basename only**
 
 **Reporting / EDA (optional; see `reporting/README.md`)**
 
-| Script | Role |
-|--------|------|
-| `reporting/report_cohort_fetch_summary.py` | `outputs/cohort_fetch_report/` from `cohort_image_fetch.log` (+ optional plan). |
-| `reporting/report_fake_news_final.py` | `outputs/fake_news_final_report/` from `fake_news_final.tsv`. |
-| `reporting/report_fakenews_eda.py` | Charts + `outputs/fakenews_viz/index.html` from `data/fakenews.tsv`. |
-| `notebooks/fakenews_preprocessing_eda.ipynb` | Interactive profiling, FNN vs crawl stats, Fakeddit quality. |
+| Artefact | Role |
+|----------|------|
+| `notebooks/fakenews_preprocessing_eda.ipynb` | Single interactive notebook: full `fakenews.tsv` profiling, FNN vs crawl, Fakeddit source stats, image checks, cohort fetch log (§7), gated export `fake_news_final.tsv` (§8). |
 
 ### 7.4 Reproducible order (cohort multimodal, after `data/fakenews.tsv` exists)
 
@@ -283,6 +280,6 @@ Run from the project root (adjust paths if you change defaults):
 6. **`python pipeline/10_cohort_merge_fetch_log_into_fakenews.py`** — merge fetch paths/status into `fakenews.tsv` (pass **`--no-backup`** to skip `*.cohort_fetch_merge.bak`).
 7. **`python pipeline/11_cohort_export_final_tsv.py`** — write `fake_news_final.tsv`.
 
-*(Optional reporting, any time after the relevant inputs exist:)* **`python reporting/report_cohort_fetch_summary.py`**, **`python reporting/report_fake_news_final.py`**, **`python reporting/report_fakenews_eda.py`** — see **`reporting/README.md`**.
+*(Optional exploration after the relevant inputs exist:)* open **`notebooks/fakenews_preprocessing_eda.ipynb`** — see **`reporting/README.md`**.
 
 **Data layout and clone commands:** **`DATA_LAYOUT.md`**.

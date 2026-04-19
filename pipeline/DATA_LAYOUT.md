@@ -1,8 +1,8 @@
 # Data layout and clone commands
 
-This file lives in **`pipeline/`** next to the numbered Python scripts. Optional **report** scripts live in **`reporting/`** at the project root. **Upstream** FakeNewsNet and Fakeddit Git clones live here too (`pipeline/fakenewsnet/`, `pipeline/fakeddit/`). **Generated** tables and crawl output go under **`data/`** (root TSVs and `data/processed/`).
+This file lives in **`pipeline/`** next to the numbered Python scripts. Interactive **reporting / EDA** is in **`notebooks/fakenews_preprocessing_eda.ipynb`** (see **`reporting/README.md`**). **Upstream** FakeNewsNet and Fakeddit Git clones live here too (`pipeline/fakenewsnet/`, `pipeline/fakeddit/`). **Generated** tables and crawl output go under **`data/`** (root TSVs and `data/processed/`).
 
-**Also read:** **`DATASETS_OVERVIEW.md`** (schema and cohort order) and **`DATA_PIPELINE_FILES_REFERENCE.md`** (script ↔ output map). **`README.md`** in this folder lists pipeline stage order (01–11); optional reports live under **`reporting/README.md`**.
+**Also read:** **`DATASETS_OVERVIEW.md`** (schema and cohort order) and **`DATA_PIPELINE_FILES_REFERENCE.md`** (script ↔ output map). **`README.md`** in this folder lists pipeline stage order (01–11); interactive reporting is described under **`reporting/README.md`**.
 
 ---
 

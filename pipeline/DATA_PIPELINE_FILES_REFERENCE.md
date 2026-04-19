@@ -2,7 +2,7 @@
 
 Every path below exists in this repository (or is a **fixed output location** written by those scripts). Filenames under **`pipeline/`** use a **stage prefix** (`01_`–`11_`) for acquisition → QA → consolidate → cohort. **`pipeline/04_consolidate_fakenews_tsv.py`** builds **`data/fakenews.tsv`** from Fakeddit + FNN sources (see **`pipeline/DATASETS_OVERVIEW.md`** §7.2). Merge/export scripts assume **`data/fakenews.tsv`** is already present or created by consolidation.
 
-**Optional reporting** scripts live in **`reporting/`** (`report_*.py`); they read generated artefacts and write under **`outputs/`**.
+**Interactive reporting / EDA** is in **`notebooks/fakenews_preprocessing_eda.ipynb`** (see **`reporting/README.md`**).
 
 ---
 
@@ -32,13 +32,11 @@ Every path below exists in this repository (or is a **fixed output location** wr
 
 ---
 
-## `reporting/` (optional reports — re-runnable anytime)
+## `reporting/`
 
 | Path | Role |
 |------|------|
-| `reporting/report_cohort_fetch_summary.py` | `outputs/cohort_fetch_report/*.md` + `*.json` from `cohort_image_fetch.log` (+ optional plan). |
-| `reporting/report_fake_news_final.py` | `outputs/fake_news_final_report/*.md` + `*.json` from `fake_news_final.tsv`. |
-| `reporting/report_fakenews_eda.py` | Charts / `outputs/fakenews_viz/` from `fakenews.tsv`. |
+| `reporting/README.md` | Pointer to **`notebooks/fakenews_preprocessing_eda.ipynb`** for interactive reporting. |
 
 ---
 
@@ -46,7 +44,7 @@ Every path below exists in this repository (or is a **fixed output location** wr
 
 | Path | Role |
 |------|------|
-| `requirements.txt` | Notebook / general Python deps (e.g. EDA, `reporting/report_fakenews_eda.py`). |
+| `requirements.txt` | Notebook / general Python deps (e.g. EDA in **`notebooks/fakenews_preprocessing_eda.ipynb`**). |
 | `requirements-fakenewsnet-crawl.txt` | Deps for `01_acquire_fakenewsnet_crawl.py`. |
 
 ---
@@ -55,7 +53,7 @@ Every path below exists in this repository (or is a **fixed output location** wr
 
 | Path | Role |
 |------|------|
-| `notebooks/fakenews_preprocessing_eda.ipynb` | EDA for `fakenews.tsv`, FNN crawl stats, Fakeddit quality. |
+| `notebooks/fakenews_preprocessing_eda.ipynb` | Interactive QA: `fakenews.tsv`, FNN crawl stats, Fakeddit quality, cohort fetch log (§7), gated export (§8), image checks. |
 
 ---
 
@@ -73,15 +71,9 @@ Every path below exists in this repository (or is a **fixed output location** wr
 
 ---
 
-## Canonical `outputs/` paths (written by reporting scripts)
+## Optional `outputs/` (not produced by removed CLI scripts)
 
-| Path | Produced by |
-|------|-------------|
-| `outputs/cohort_fetch_report/cohort_image_fetch_summary.md` | `reporting/report_cohort_fetch_summary.py` |
-| `outputs/cohort_fetch_report/cohort_image_fetch_summary.json` | `reporting/report_cohort_fetch_summary.py` |
-| `outputs/fake_news_final_report/fake_news_final_summary.md` | `reporting/report_fake_news_final.py` |
-| `outputs/fake_news_final_report/fake_news_final_summary.json` | `reporting/report_fake_news_final.py` |
-| `outputs/fakenews_viz/` | `reporting/report_fakenews_eda.py` |
+You may keep optional HTML/PNG/Markdown exports under **`outputs/`** (e.g. cohort fetch summary, final cohort summary, fakenews viz) from **notebook exports** or older runs. Nothing in **`pipeline/`** writes these by default.
 
 ---
 
