@@ -12,6 +12,7 @@ Run from any working directory; relative ``--out`` / ``--dataset-dir`` resolve t
 (parent of ``pipeline/``), not the shell cwd:
 
     python pipeline/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --resume
+    python pipeline/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --max-articles 10
 
 Failures are appended to ``<out>/crawl_failures.jsonl`` (one JSON object per line). By default, rows whose
 ``(news_source, label, news_id)`` already appear there are **skipped** on later runs (saves time on dead URLs);
@@ -201,6 +202,16 @@ def main() -> int:
         help="Skip items that already have a readable news content.json (re-run safely later).",
     )
     parser.add_argument(
+        "--max-articles",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Queue at most N articles for crawl in this run, counted after resume skips and failure-log skips; "
+            "applies across all news_source/label buckets (stops scanning further CSV rows once the cap is reached)."
+        ),
+    )
+    parser.add_argument(
         "--retry-empty",
         action="store_true",
         help="With --resume, still re-fetch when existing JSON has no non-whitespace text (old partial saves).",
@@ -267,6 +278,10 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.max_articles is not None and args.max_articles < 1:
+        print("--max-articles must be >= 1", file=sys.stderr)
+        return 1
+
     if not args.verbose_crawl:
         _silence_upstream_crawl_logs()
 
@@ -282,8 +297,10 @@ def main() -> int:
         known_failures = _load_known_failure_keys(failure_log)
 
     w = max(1, int(args.workers))
+    max_art = args.max_articles
     print(
         f"Output: {out}\nDataset: {dataset_dir}\nResume: {args.resume}\n"
+        f"Max articles queued: {max_art if max_art is not None else '(no cap)'}\n"
         f"Post-download sleep cap: {args.post_download_sleep}s\nWorkers: {w}\n"
         f"Skip ids in failure log: {not args.retry_known_failures} "
         f"({len(known_failures)} unique keys loaded)",
@@ -343,8 +360,12 @@ def main() -> int:
     total_failed = 0
     total_skipped = 0
     total_skipped_known_failure = 0
+    queued_for_crawl = 0
+    max_q = args.max_articles
 
     for choice in choices:
+        if max_q is not None and queued_for_crawl >= max_q:
+            break
         news_list = loader.load_news_file(choice)
         news_source = choice["news_source"]
         label = choice["label"]
@@ -355,6 +376,8 @@ def main() -> int:
 
         pending: list[Any] = []
         for news in news_list:
+            if max_q is not None and queued_for_crawl >= max_q:
+                break
             total_attempted += 1
             out_json = save_dir / news.news_id / "news content.json"
             if args.resume:
@@ -382,6 +405,7 @@ def main() -> int:
                 total_skipped_known_failure += 1
                 continue
             pending.append(news)
+            queued_for_crawl += 1
 
         def apply_result(r: dict[str, Any]) -> None:
             nonlocal total_ok, total_failed
@@ -425,6 +449,8 @@ def main() -> int:
         "dataset_dir": str(dataset_dir),
         "dump_location": str(out),
         "mode": "news_articles_only",
+        "max_articles": max_art,
+        "queued_for_crawl": queued_for_crawl,
         "resume": args.resume,
         "retry_empty": args.retry_empty,
         "failure_log": str(failure_log),
