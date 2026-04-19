@@ -1,0 +1,17 @@
+# Flake8 — allow long docstrings and argparse help without aggressive wrapping.
+# max-line-length applies to all Python files in the repo (including scripts/*.py).
+[flake8]
+max-line-length = 200
+extend-ignore =
+    # Black / PEP 8 compatibility
+    E203,
+    W503
+exclude =
+    .git,
+    .venv,
+    venv,
+    __pycache__,
+    .eggs,
+    *.egg,
+    build,
+    dist

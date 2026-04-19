@@ -1,0 +1,6 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "extraPaths": ["data/fakenewsnet/code"],
+  "executionEnvironments": [{ "root": "." }, { "root": "notebooks" }]
+}

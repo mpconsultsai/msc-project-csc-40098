@@ -1,0 +1,120 @@
+# Keep shared editor Python settings; ignore other local VS Code files
+.vscode/*
+!.vscode/settings.json
+.cursor/
+documents/
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Packaging / build
+build/
+dist/
+develop-eggs/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+wheelhouse/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+.tox/
+.nox/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.hypothesis/
+
+# Type checking / IDE
+.pytype/
+.pyre/
+.idea/
+*.iml
+
+# --- Environments ---
+.env
+.env.*
+env/
+ENV/
+venv/
+.venv/
+conda-meta/
+
+# --- Jupyter / IPython ---
+.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+
+# --- Logs / temp ---
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+# --- Data / ML artifacts (keep raw datasets and produced artifacts out of git) ---
+# Official shallow clones (nested .git); update: git -C data/fakenewsnet pull etc.
+data/fakenewsnet/
+data/fakeddit/
+# Large generated / downloaded trees (keep only README.md tracked)
+data/processed/*
+!data/processed/README.md
+data/fakenews.tsv
+data/fake_news_final.tsv
+data/fakenews_with_image_fetch.tsv
+data/fakenews.tsv.original_copy
+datasets/
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.tflite
+*.pkl
+*.pickle
+*.joblib
+*.npz
+*.npy
+
+# Common output dirs
+outputs/
+results/
+predictions/
+checkpoints/
+models/
+
+# --- Experiment tracking ---
+mlruns/
+mlartifacts/
+wandb/
+lightning_logs/
+tensorboard/
+runs/
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Secrets / credentials ---
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der

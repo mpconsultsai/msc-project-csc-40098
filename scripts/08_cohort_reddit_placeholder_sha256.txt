@@ -1,0 +1,4 @@
+# Known CDN “content not viewable in your region” (and similar) raster stubs.
+# One lowercase SHA-256 hex per line; from bytes as stored on disk (JPEG/PNG).
+# Example: fd_cb4phn0.jpg — Reddit region placeholder, 336×478 RGB.
+faa24ec881e6040655c187a681d6dc496eb8aa41e1bd0652a180b3a40b457187
