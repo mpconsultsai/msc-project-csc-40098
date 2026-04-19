@@ -28,7 +28,7 @@ Every path below exists in this repository (or is a **fixed output location** wr
 
 | Path | Role |
 |------|------|
-| `cohort_reddit_placeholder_sha256.txt` | SHA-256 blocklist for `06_cohort_fetch_images.py` (not a pipeline script). |
+| `reddit_placeholder_sha256.txt` | SHA-256 blocklist for `06_cohort_fetch_images.py` (data file next to scripts in `pipeline/`). |
 
 ---
 

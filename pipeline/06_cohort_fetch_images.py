@@ -31,7 +31,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_OUT_DIR = Path("data/processed/images")
 DEFAULT_PLAN = Path("data/processed/cohorts/multimodal_plan_n50000_seed42.tsv")
-DEFAULT_BLOCKLIST = Path("cohort_reddit_placeholder_sha256.txt")
+DEFAULT_BLOCKLIST = Path("pipeline/reddit_placeholder_sha256.txt")
 
 _FILENAME_BAD = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 

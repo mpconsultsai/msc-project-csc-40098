@@ -255,7 +255,7 @@ Stage prefixes match **`pipeline/README.md`**. Names below are **basename only**
 | Script | Role |
 |--------|------|
 | `05_cohort_build_plan.py` | Build stratified plan TSV (e.g. `data/processed/cohorts/multimodal_plan_n50000_seed42.tsv`). |
-| `06_cohort_fetch_images.py` | Download images for plan rows; append `data/processed/images/cohort_image_fetch.log`. Uses `cohort_reddit_placeholder_sha256.txt` (project root). |
+| `06_cohort_fetch_images.py` | Download images for plan rows; append `data/processed/images/cohort_image_fetch.log`. Uses `pipeline/reddit_placeholder_sha256.txt`. |
 | `07_cohort_dedupe_fetch_log.py` | Optional: dedupe cohort log after parallel mistakes. |
 | `08_cohort_image_validation.py` | Heuristic image QC → `data/processed/cohorts/image_validation/` (`cohort_image_validation.tsv`). |
 | `09_cohort_merge_image_validation_into_fakenews.py` | Adds `image_option1_*` columns to `data/fakenews.tsv`. |

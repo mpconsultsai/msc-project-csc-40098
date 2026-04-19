@@ -12,13 +12,13 @@ Names are ordered **01–11** by typical pipeline position. **Cohort** steps (05
 
 | Goal | Run |
 |------|-----|
-| **Stratified multimodal cohort → `fake_news_final.tsv`** (thesis path) | **05 → 06** (plus **`cohort_reddit_placeholder_sha256.txt`** at project root) → **08 → 09 → 10 → 11**. Optional: **07** if the fetch log has duplicate `sample_id`s. |
+| **Stratified multimodal cohort → `fake_news_final.tsv`** (thesis path) | **05 → 06** (plus **`pipeline/reddit_placeholder_sha256.txt`**) → **08 → 09 → 10 → 11**. Optional: **07** if the fetch log has duplicate `sample_id`s. |
 | **Raw corpora only** | **01** (FakeNewsNet crawl) and/or **02** (Fakeddit download), depending which sources you use. |
 | **FNN crawl hygiene** | **03** (dedupe failure log) — optional. |
 | **Fetch / final / EDA exploration** | **`notebooks/fakenews_preprocessing_eda.ipynb`** — optional; see **`reporting/README.md`**. |
 
 **Minimal cohort chain (data-producing):** `05` → `06` → `08` → `09` → `10` → `11`.  
-**Supporting file:** `cohort_reddit_placeholder_sha256.txt` (project root; referenced by `06`, not executed).
+**Supporting file:** `pipeline/reddit_placeholder_sha256.txt` (referenced by `06`, not executed).
 
 | # | File | Stage |
 |---|------|--------|
