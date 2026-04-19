@@ -1,5 +1,5 @@
-# Minimal deps for scripts/01_acquire_fakenewsnet_crawl.py (newspaper3k crawl).
-# Use instead of data/fakenewsnet/requirements.txt on Python 3.10+ where pinned old pins fail.
+# Minimal deps for pipeline/01_acquire_fakenewsnet_crawl.py (newspaper3k crawl).
+# Use instead of pipeline/fakenewsnet/requirements.txt on Python 3.10+ where pinned old pins fail.
 newspaper3k>=0.2.8
 tqdm>=4.66.0
 requests>=2.28.0

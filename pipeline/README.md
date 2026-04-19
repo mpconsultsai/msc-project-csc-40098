@@ -1,10 +1,12 @@
-# Pipeline scripts (stage-prefixed)
+# Pipeline (`pipeline/`)
 
-Names are ordered **01–16** by typical pipeline position. **Cohort** steps (07–15) assume `data/fakenews.tsv` already exists; see **`data/DATASETS_OVERVIEW.md`** §7.2.
+Numbered Python entrypoints live in **`pipeline/`** (project root). Run from the repo root, e.g. `python pipeline/05_consolidate_fakenews_tsv.py …`.
+
+Names are ordered **01–16** by typical pipeline position. **Cohort** steps (07–15) assume `data/fakenews.tsv` already exists; see **`pipeline/DATASETS_OVERVIEW.md`** §7.2.
 
 ## What is actually required?
 
-**Initial unified table:** run **`05_consolidate_fakenews_tsv.py all`** (or `fakeddit` / `fakenewsnet` only) — see **`data/DATASETS_OVERVIEW.md`** §7.2. **`01`** can invoke `05_consolidate_fakenews_tsv.py all` after a crawl. After **`data/fakenews.tsv`** exists:
+**Initial unified table:** run **`05_consolidate_fakenews_tsv.py all`** (or `fakeddit` / `fakenewsnet` only) — see **`pipeline/DATASETS_OVERVIEW.md`** §7.2. **`01`** can invoke `05_consolidate_fakenews_tsv.py all` after a crawl. After **`data/fakenews.tsv`** exists:
 
 | Goal | Run |
 |------|-----|
@@ -39,4 +41,4 @@ Names are ordered **01–16** by typical pipeline position. **Cohort** steps (07
 
 **Consolidation:** `05_consolidate_fakenews_tsv.py` — builds `data/fakenews.tsv`; `01_acquire_fakenewsnet_crawl.py` calls `all` after a crawl if you do not pass `--no-consolidate-image-refs`.
 
-Full paths and outputs: **`data/DATA_PIPELINE_FILES_REFERENCE.md`**.
+Full paths and outputs: **`pipeline/DATA_PIPELINE_FILES_REFERENCE.md`**.

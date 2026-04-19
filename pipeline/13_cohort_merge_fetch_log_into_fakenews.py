@@ -17,8 +17,8 @@ cohort fetch attempt.
 
 Streams ``fakenews.tsv``; writes ``*.cohort_fetch_merge.bak`` unless ``--no-backup``.
 
-    python scripts/13_cohort_merge_fetch_log_into_fakenews.py
-    python scripts/13_cohort_merge_fetch_log_into_fakenews.py --dry-run
+    python pipeline/13_cohort_merge_fetch_log_into_fakenews.py
+    python pipeline/13_cohort_merge_fetch_log_into_fakenews.py --dry-run
 """
 
 from __future__ import annotations

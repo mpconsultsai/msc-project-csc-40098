@@ -1,6 +1,6 @@
 # Datasets overview — generated and planned artefacts
 
-This note summarises **what you have on disk**, **what the crawl/download steps produce**, and **how a unified training table represents both corpora** (FakeNewsNet + Fakeddit) for multimodal ML: **text and image** fields, with explicit flags for URL vs downloaded vs training-eligible media. Operational commands stay in **`README.md`** in this folder; script inventory is **`DATA_PIPELINE_FILES_REFERENCE.md`**.
+This note summarises **what you have on disk**, **what the crawl/download steps produce**, and **how a unified training table represents both corpora** (FakeNewsNet + Fakeddit) for multimodal ML: **text and image** fields, with explicit flags for URL vs downloaded vs training-eligible media. Operational commands for clones and downloads are in **`DATA_LAYOUT.md`** (same folder); the script/output inventory is **`DATA_PIPELINE_FILES_REFERENCE.md`**.
 
 ---
 
@@ -11,7 +11,7 @@ This note summarises **what you have on disk**, **what the crawl/download steps 
 | **FakeNewsNet** | [KaiDMML/FakeNewsNet](https://github.com/KaiDMML/FakeNewsNet) | News articles (PolitiFact + GossipCop indices); article bodies and image URLs via **local crawl**, not a redistributed archive. |
 | **Fakeddit** | [entitize/Fakeddit](https://github.com/entitize/Fakeddit); TSVs from Google Drive | Reddit multimodal benchmark (title + `image_url`); **official splits** in filenames. |
 
-**Out of scope here:** full Twitter social graph collection for FakeNewsNet (requires API keys and upstream `main.py`); Fakeddit **image archive** and **comment** dumps unless you opt in via `scripts/02_acquire_fakeddit_metadata.py --images` / `--comments`.
+**Out of scope here:** full Twitter social graph collection for FakeNewsNet (requires API keys and upstream `main.py`); Fakeddit **image archive** and **comment** dumps unless you opt in via `pipeline/02_acquire_fakeddit_metadata.py --images` / `--comments`.
 
 ---
 
@@ -19,12 +19,12 @@ This note summarises **what you have on disk**, **what the crawl/download steps 
 
 ### 2.1 Shallow Git clone (nested repo, gitignored at project root)
 
-- **Path:** `data/fakenewsnet/`
+- **Path:** `pipeline/fakenewsnet/`
 - **Contents:** upstream `README`, `dataset/*.csv`, `code/` (crawlers, `config.json`).
 
 ### 2.2 Minimal index CSVs (in the clone)
 
-Four files under **`data/fakenewsnet/dataset/`**:
+Four files under **`pipeline/fakenewsnet/dataset/`**:
 
 - `politifact_fake.csv`, `politifact_real.csv`
 - `gossipcop_fake.csv`, `gossipcop_real.csv`
@@ -37,7 +37,7 @@ Typical columns: **`id`**, **`news_url`**, **`title`**, **`tweet_ids`**. These a
 
 - **Path:** `data/processed/fakenewsnet/`
 - **Layout:** `<politifact|gossipcop>/<fake|real>/<id>/news content.json`
-- **Produced by:** `scripts/01_acquire_fakenewsnet_crawl.py` (newspaper3k + optional Wayback fallback; **no Twitter**).
+- **Produced by:** `pipeline/01_acquire_fakenewsnet_crawl.py` (newspaper3k + optional Wayback fallback; **no Twitter**).
 
 **Sidecar files:**
 
@@ -61,7 +61,7 @@ Row counts are **data lines excluding the header** (one row ≈ one news item in
 | `gossipcop_real.csv` | 16,817 |
 | **Total** | **23,196** |
 
-**Refresh:** count lines in `data/fakenewsnet/dataset/*.csv` (minus one header per file).
+**Refresh:** count lines in `pipeline/fakenewsnet/dataset/*.csv` (minus one header per file).
 
 ### 2.5 Crawl output — progress and `crawl_failures.jsonl` (snapshot)
 
@@ -94,7 +94,7 @@ The following figures are a **point-in-time snapshot** from this machine (**2026
 | Distinct `news_id` with `empty_body` (at least once) | 14 |
 | Source/label mix in this snapshot | all events `politifact/fake` (crawl had not finished other splits yet) |
 
-**Analyse / clean the failure log (scripts in repo):** `scripts/03_qa_fnn_dedupe_crawl_failures.py` (dedupe by `news_id`, keep latest `ts`), then `scripts/04_qa_fnn_visualize_crawl_failures.py` for charts under `outputs/fnn_failure_viz/`. For tabular summaries, use **`notebooks/fakenews_preprocessing_eda.ipynb`** or ad-hoc Python/pandas on `crawl_failures.jsonl`.
+**Analyse / clean the failure log (scripts in repo):** `pipeline/03_qa_fnn_dedupe_crawl_failures.py` (dedupe by `news_id`, keep latest `ts`), then `pipeline/04_qa_fnn_visualize_crawl_failures.py` for charts under `outputs/fnn_failure_viz/`. For tabular summaries, use **`notebooks/fakenews_preprocessing_eda.ipynb`** or ad-hoc Python/pandas on `crawl_failures.jsonl`.
 
 **Regenerate successful JSON count (PowerShell):**
 
@@ -110,11 +110,11 @@ When a full crawl finishes, **`data/processed/fakenewsnet/_manifest.json`** (wri
 
 ### 3.1 Shallow Git clone (nested repo, gitignored)
 
-- **Path:** `data/fakeddit/` — scripts and README; **not** the large TSVs.
+- **Path:** `pipeline/fakeddit/` — scripts and README; **not** the large TSVs.
 
 ### 3.2 Processed download: v2 text/metadata (gitignored)
 
-- **Path:** `data/processed/fakeddit/v2_text_metadata/` (from `scripts/02_acquire_fakeddit_metadata.py` by default; corpus root **`data/processed/fakeddit/`**).
+- **Path:** `data/processed/fakeddit/v2_text_metadata/` (from `pipeline/02_acquire_fakeddit_metadata.py` by default; corpus root **`data/processed/fakeddit/`**).
 
 **Typical contents:**
 
@@ -149,7 +149,7 @@ Counts are **data rows excluding the header** per file.
 | `all_test_public.tsv` | 92,481 |
 | **Total** | **1,063,490** |
 
-**Refresh:** re-run line counts on your copies under `data/processed/fakeddit/v2_text_metadata/` after any re-download. If you used `data/fakeddit_dataset/`, a flat `data/processed/v2_text_metadata/`, or `data/fakenewsnet_collected/`, see `data/processed/README.md` for the layout under `fakeddit/` and `fakenewsnet/`.
+**Refresh:** re-run line counts on your copies under `data/processed/fakeddit/v2_text_metadata/` after any re-download. If you used `data/fakeddit_dataset/`, a flat `data/processed/v2_text_metadata/`, or `data/fakenewsnet_collected/`, see **`pipeline/DATA_LAYOUT.md`** for clone locations and typical paths under `data/processed/`.
 
 ---
 
@@ -209,8 +209,8 @@ The working unified file is **`data/fakenews.tsv`** (typically **gitignored** at
 
 ## 6. Citations (point to upstream READMEs / papers)
 
-- **FakeNewsNet:** cite papers listed in `data/fakenewsnet/README.md` (e.g. Shu et al., repository paper).
-- **Fakeddit:** Nakamura et al.; links in `data/fakeddit/README.md` and the dataset site/paper.
+- **FakeNewsNet:** cite papers listed in `pipeline/fakenewsnet/README.md` (e.g. Shu et al., repository paper).
+- **Fakeddit:** Nakamura et al.; links in `pipeline/fakeddit/README.md` and the dataset site/paper.
 
 ---
 
@@ -218,17 +218,17 @@ The working unified file is **`data/fakenews.tsv`** (typically **gitignored** at
 
 ### 7.1 Authoritative index
 
-- **`data/DATA_PIPELINE_FILES_REFERENCE.md`** — table of **every** file under `scripts/`, pipeline stages, data/output paths, and maintenance notes. **Start here** for cross-referencing.
+- **`pipeline/DATA_PIPELINE_FILES_REFERENCE.md`** — table of **every** file under `pipeline/`, pipeline stages, data/output paths, and maintenance notes. **Start here** for cross-referencing.
 
 ### 7.2 Base table: `data/fakenews.tsv`
 
-The unified TSV must match the **§4** schema (at least the columns you use for modelling). **Build or refresh** it with **`scripts/05_consolidate_fakenews_tsv.py`** (`all` | `fakeddit` | `fakenewsnet`), which reads Fakeddit multimodal TSVs under `v2_text_metadata/` and FakeNewsNet `news content.json` trees (and index CSVs for URLs), and omits FNN rows listed in **`crawl_failures.jsonl`**. Alternatively, restore rows from a backed-up `fakenews.tsv`. **`01_acquire_fakenewsnet_crawl.py`** can run `05_consolidate_fakenews_tsv.py all` after a crawl when that script is present.
+The unified TSV must match the **§4** schema (at least the columns you use for modelling). **Build or refresh** it with **`pipeline/05_consolidate_fakenews_tsv.py`** (`all` | `fakeddit` | `fakenewsnet`), which reads Fakeddit multimodal TSVs under `v2_text_metadata/` and FakeNewsNet `news content.json` trees (and index CSVs for URLs), and omits FNN rows listed in **`crawl_failures.jsonl`**. Alternatively, restore rows from a backed-up `fakenews.tsv`. **`01_acquire_fakenewsnet_crawl.py`** can run `05_consolidate_fakenews_tsv.py all` after a crawl when that script is present.
 
 All **cohort** steps below **assume** `data/fakenews.tsv` already exists at the project root.
 
-### 7.3 Scripts in `scripts/` (by role)
+### 7.3 Scripts in `pipeline/` (by role)
 
-Stage prefixes match **`scripts/README.md`**. Names below are **basename only**; run as `python scripts/<name>`.
+Stage prefixes match **`pipeline/README.md`**. Names below are **basename only**; run as `python pipeline/<name>`.
 
 **Corpus acquisition**
 
@@ -282,14 +282,14 @@ Stage prefixes match **`scripts/README.md`**. Names below are **basename only**;
 
 Run from the project root (adjust paths if you change defaults):
 
-1. **`python scripts/07_cohort_build_plan.py`** — create/refresh the cohort plan TSV (set `--input`, `--n`, `--seed` as needed).
-2. **`python scripts/08_cohort_fetch_images.py`** — fetch until target successes (e.g. `--stop-after-ok 50000`). Uses plan + blocklist.
-3. *(Optional)* **`python scripts/09_cohort_dedupe_fetch_log.py`** — if the log contains duplicate `sample_id` lines.
-4. **`python scripts/10_cohort_summarize_fetch.py`** — refresh fetch report.
-5. **`python scripts/11_cohort_validate_images_option1.py`** — full validation sweep (`--resume` as needed); then **`python scripts/11_cohort_validate_images_option1.py --sort-only`** if you only need re-sorting.
-6. **`python scripts/12_cohort_merge_option1_into_fakenews.py`** — merge scores into `fakenews.tsv` (pass **`--no-backup`** to skip writing `*.option1_merge.bak`).
-7. **`python scripts/13_cohort_merge_fetch_log_into_fakenews.py`** — merge fetch paths/status into `fakenews.tsv` (pass **`--no-backup`** to skip `*.cohort_fetch_merge.bak`).
-8. **`python scripts/14_cohort_export_final_tsv.py`** — write `fake_news_final.tsv`.
-9. **`python scripts/15_cohort_summarize_final.py`** — refresh final summary report.
+1. **`python pipeline/07_cohort_build_plan.py`** — create/refresh the cohort plan TSV (set `--input`, `--n`, `--seed` as needed).
+2. **`python pipeline/08_cohort_fetch_images.py`** — fetch until target successes (e.g. `--stop-after-ok 50000`). Uses plan + blocklist.
+3. *(Optional)* **`python pipeline/09_cohort_dedupe_fetch_log.py`** — if the log contains duplicate `sample_id` lines.
+4. **`python pipeline/10_cohort_summarize_fetch.py`** — refresh fetch report.
+5. **`python pipeline/11_cohort_validate_images_option1.py`** — full validation sweep (`--resume` as needed); then **`python pipeline/11_cohort_validate_images_option1.py --sort-only`** if you only need re-sorting.
+6. **`python pipeline/12_cohort_merge_option1_into_fakenews.py`** — merge scores into `fakenews.tsv` (pass **`--no-backup`** to skip writing `*.option1_merge.bak`).
+7. **`python pipeline/13_cohort_merge_fetch_log_into_fakenews.py`** — merge fetch paths/status into `fakenews.tsv` (pass **`--no-backup`** to skip `*.cohort_fetch_merge.bak`).
+8. **`python pipeline/14_cohort_export_final_tsv.py`** — write `fake_news_final.tsv`.
+9. **`python pipeline/15_cohort_summarize_final.py`** — refresh final summary report.
 
-**Data layout and clone commands:** **`data/README.md`**.
+**Data layout and clone commands:** **`DATA_LAYOUT.md`**.

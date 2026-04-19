@@ -5,9 +5,9 @@ Optionally joins the cohort plan TSV to break down **primary vs reserve** and st
 
 Writes **Markdown** + **JSON** under ``--out-dir`` (default ``outputs/cohort_fetch_report``).
 
-    python scripts/10_cohort_summarize_fetch.py
-    python scripts/10_cohort_summarize_fetch.py --log data/processed/images/cohort_image_fetch.log
-    python scripts/10_cohort_summarize_fetch.py --plan data/processed/cohorts/multimodal_plan_n50000_seed42.tsv --target-primary 50000
+    python pipeline/10_cohort_summarize_fetch.py
+    python pipeline/10_cohort_summarize_fetch.py --log data/processed/images/cohort_image_fetch.log
+    python pipeline/10_cohort_summarize_fetch.py --plan data/processed/cohorts/multimodal_plan_n50000_seed42.tsv --target-primary 50000
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def _load_plan_index(plan_path: Path) -> dict[str, dict[str, str]]:
     return out
 
 
-# Align with ``scripts/08_cohort_fetch_images.py`` ``_download_one`` (literal ``detail`` values + ``type(e).__name__``).
+# Align with ``pipeline/08_cohort_fetch_images.py`` ``_download_one`` (literal ``detail`` values + ``type(e).__name__``).
 _FAILURE_DETAIL_GLOSSARY: dict[str, str] = {
     "(empty)": "No text was stored in the log’s `detail` column (unexpected for normal runs).",
     "reddit_placeholder_sha256": (
@@ -516,7 +516,7 @@ def main() -> int:
 
     lines.append("## Failure `detail` field\n")
     lines.append(
-        "The cohort fetcher (`scripts/08_cohort_fetch_images.py`, `_download_one`) writes either a **fixed string** "
+        "The cohort fetcher (`pipeline/08_cohort_fetch_images.py`, `_download_one`) writes either a **fixed string** "
         "after local checks (size, SHA blocklist, PIL verify) or **`type(e).__name__`** from the HTTP stack "
         "(typically `requests` / `urllib3`). The log does not store full stack traces or HTTP status lines for "
         "most errors.\n"

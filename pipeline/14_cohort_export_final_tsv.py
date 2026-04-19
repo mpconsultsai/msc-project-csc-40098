@@ -7,8 +7,8 @@ subset that is both successfully fetched and QC-eligible).
 Default threshold is **inclusive** (>= 75), matching ``image_option1_training_eligible=true``.
 Use ``--min-score 76`` if you require strictly greater than 75.
 
-    python scripts/14_cohort_export_final_tsv.py
-    python scripts/14_cohort_export_final_tsv.py --min-score 76
+    python pipeline/14_cohort_export_final_tsv.py
+    python pipeline/14_cohort_export_final_tsv.py --min-score 76
 """
 
 from __future__ import annotations

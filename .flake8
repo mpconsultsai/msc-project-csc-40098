@@ -1,5 +1,5 @@
 # Flake8 — allow long docstrings and argparse help without aggressive wrapping.
-# max-line-length applies to all Python files in the repo (including scripts/*.py).
+# max-line-length applies to all Python files in the repo (including pipeline/*.py).
 [flake8]
 max-line-length = 200
 extend-ignore =

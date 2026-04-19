@@ -3,8 +3,8 @@ Pie / bar charts from deduplicated ``crawl_failures.jsonl`` (FakeNewsNet).
 
 Writes PNGs under ``outputs/fnn_failure_viz/`` by default.
 
-    python scripts/04_qa_fnn_visualize_crawl_failures.py
-    python scripts/04_qa_fnn_visualize_crawl_failures.py --log data/processed/fakenewsnet/crawl_failures.jsonl
+    python pipeline/04_qa_fnn_visualize_crawl_failures.py
+    python pipeline/04_qa_fnn_visualize_crawl_failures.py --log data/processed/fakenewsnet/crawl_failures.jsonl
 """
 
 from __future__ import annotations

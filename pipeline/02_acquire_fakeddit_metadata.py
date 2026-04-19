@@ -4,10 +4,10 @@ Download Fakeddit v2.0 text/metadata from Google Drive (default).
 Image archive and comment folders are **opt-in** (`--images`, `--comments`) — large and not required
 for TSV-based multimodal work if you use `image_url` or skip images entirely.
 
-Official links: data/fakeddit/README.md. Requires: pip install gdown
+Official links: pipeline/fakeddit/README.md. Requires: pip install gdown
 
-    python scripts/02_acquire_fakeddit_metadata.py --out data/processed/fakeddit
-    python scripts/02_acquire_fakeddit_metadata.py --images --comments   # full Drive mirror
+    python pipeline/02_acquire_fakeddit_metadata.py --out data/processed/fakeddit
+    python pipeline/02_acquire_fakeddit_metadata.py --images --comments   # full Drive mirror
 """
 
 from __future__ import annotations

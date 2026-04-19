@@ -3,8 +3,8 @@ Summarise ``data/fake_news_final.tsv`` (option-1 gated multimodal cohort) for re
 
 Writes Markdown + JSON under ``outputs/fake_news_final_report/`` by default.
 
-    python scripts/15_cohort_summarize_final.py
-    python scripts/15_cohort_summarize_final.py --input data/fake_news_final.tsv --out-dir outputs/fake_news_final_report
+    python pipeline/15_cohort_summarize_final.py
+    python pipeline/15_cohort_summarize_final.py --input data/fake_news_final.tsv --out-dir outputs/fake_news_final_report
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-OPTION1_SCRIPT = "scripts/11_cohort_validate_images_option1.py"
+OPTION1_SCRIPT = "pipeline/11_cohort_validate_images_option1.py"
 
 
 def _markdown_option1_methodology() -> str:
@@ -63,11 +63,11 @@ def _references_payload() -> dict:
     return {
         "internal_project_documents": [
             {
-                "path": "data/DATA_PIPELINE_FILES_REFERENCE.md",
+                "path": "pipeline/DATA_PIPELINE_FILES_REFERENCE.md",
                 "note": "Tracked inventory of scripts and canonical output paths (always in git).",
             },
             {
-                "path": "data/DATASETS_OVERVIEW.md",
+                "path": "pipeline/DATASETS_OVERVIEW.md",
                 "note": "Unified TSV conventions: separate has_image_ref from image_download_ok / training-ready; multimodal cohort filtering expectations.",
             },
             {
@@ -79,7 +79,7 @@ def _references_payload() -> dict:
                 "note": "Optional local thesis/proposal (gitignored by default): SMART goals; risks on broken/missing images.",
             },
             {
-                "path": "scripts/11_cohort_validate_images_option1.py",
+                "path": "pipeline/11_cohort_validate_images_option1.py",
                 "note": "Authoritative implementation of the option-1 heuristic and score buckets.",
             },
             {

@@ -21,7 +21,7 @@ listing one entire corpus (e.g. all Fakeddit primary+reserve) before another whe
 ordered by ``dataset``, which would otherwise starve downstream fetches for the second corpus until
 tens of thousands of rows are processed.
 
-Paths resolve from the project root (parent of ``scripts/``).
+Paths resolve from the project root (parent of ``pipeline/``).
 """
 
 from __future__ import annotations

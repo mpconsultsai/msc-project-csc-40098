@@ -7,9 +7,9 @@ considered “known failures” for skip logic — it only removes repeat events
 
 Creates ``<log>.bak`` next to the log before overwriting (unless ``--dry-run``).
 
-    python scripts/03_qa_fnn_dedupe_crawl_failures.py
-    python scripts/03_qa_fnn_dedupe_crawl_failures.py --dry-run
-    python scripts/03_qa_fnn_dedupe_crawl_failures.py --log path/to/crawl_failures.jsonl
+    python pipeline/03_qa_fnn_dedupe_crawl_failures.py
+    python pipeline/03_qa_fnn_dedupe_crawl_failures.py --dry-run
+    python pipeline/03_qa_fnn_dedupe_crawl_failures.py --log path/to/crawl_failures.jsonl
 """
 
 from __future__ import annotations

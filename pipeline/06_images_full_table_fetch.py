@@ -12,11 +12,11 @@ Canonical **``data/fakenews.tsv``** is never written. If the working TSV is miss
 the canonical file. Use ``--refresh-from-canonical`` to replace the working copy from canonical before
 a run (drops prior enrichment in that file).
 
-Paths resolve from the **project root** (parent of ``scripts/``).
+Paths resolve from the **project root** (parent of ``pipeline/``).
 
-    python -u scripts/06_images_full_table_fetch.py
-    python -u scripts/06_images_full_table_fetch.py --retry-failed --retry-geo-flagged
-    python -u scripts/06_images_full_table_fetch.py --refresh-from-canonical
+    python -u pipeline/06_images_full_table_fetch.py
+    python -u pipeline/06_images_full_table_fetch.py --retry-failed --retry-geo-flagged
+    python -u pipeline/06_images_full_table_fetch.py --refresh-from-canonical
 
 **Geo / placeholder stubs:** small-image rejection (``--min-short-edge``, ``--min-total-pixels``),
 ``image_geo_blocked`` column, optional ``--block-sha256-file``.

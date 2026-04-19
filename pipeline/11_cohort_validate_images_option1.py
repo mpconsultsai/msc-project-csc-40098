@@ -10,10 +10,10 @@ Reads ``ok`` rows from ``cohort_image_fetch.log``, opens each ``local_path``, an
 The score is a **heuristic** (“how photo-like / training-friendly under these rules”), not ground truth.
 Tune buckets in ``_score_from_metrics`` after you compare samples.
 
-    python scripts/11_cohort_validate_images_option1.py
-    python scripts/11_cohort_validate_images_option1.py --limit 500
-    python scripts/11_cohort_validate_images_option1.py --resume
-    python scripts/11_cohort_validate_images_option1.py --sort-only
+    python pipeline/11_cohort_validate_images_option1.py
+    python pipeline/11_cohort_validate_images_option1.py --limit 500
+    python pipeline/11_cohort_validate_images_option1.py --resume
+    python pipeline/11_cohort_validate_images_option1.py --sort-only
 
 Optional: ``pip install imagehash`` for a perceptual hash column (near-duplicate work later).
 """

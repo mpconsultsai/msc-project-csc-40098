@@ -5,18 +5,18 @@ Build ``data/fakenews.tsv`` from Fakeddit multimodal TSVs + FakeNewsNet ``news c
 to refresh the unified table. **01** can invoke ``all`` automatically when this file exists (see
 ``01_acquire_fakenewsnet_crawl.py``).
 
-**Schema:** see ``data/DATASETS_OVERVIEW.md`` §4. ``label_binary`` is ``0``/``1`` strings (1 = fake).
+**Schema:** see ``pipeline/DATASETS_OVERVIEW.md`` §4. ``label_binary`` is ``0``/``1`` strings (1 = fake).
 
-    python scripts/05_consolidate_fakenews_tsv.py all \\
+    python pipeline/05_consolidate_fakenews_tsv.py all \\
         --input-root data/processed/fakeddit/v2_text_metadata \\
         --collected data/processed/fakenewsnet \\
         --failure-log data/processed/fakenewsnet/crawl_failures.jsonl \\
         --out data/fakenews.tsv
 
-    python scripts/05_consolidate_fakenews_tsv.py fakeddit --out data/fakenews.tsv
-    python scripts/05_consolidate_fakenews_tsv.py fakenewsnet --collected data/processed/fakenewsnet --out data/fakenews.tsv
+    python pipeline/05_consolidate_fakenews_tsv.py fakeddit --out data/fakenews.tsv
+    python pipeline/05_consolidate_fakenews_tsv.py fakenewsnet --collected data/processed/fakenewsnet --out data/fakenews.tsv
 
-Paths are relative to the **project root** (parent of ``scripts/``).
+Paths are relative to the **project root** (parent of ``pipeline/``).
 """
 
 from __future__ import annotations
@@ -347,8 +347,8 @@ def main() -> int:
     p_all.add_argument(
         "--dataset-dir",
         type=Path,
-        default=Path("data/fakenewsnet/dataset"),
-        help="FakeNewsNet index CSVs for URLs/titles (default: data/fakenewsnet/dataset)",
+        default=Path("pipeline/fakenewsnet/dataset"),
+        help="FakeNewsNet index CSVs for URLs/titles (default: pipeline/fakenewsnet/dataset)",
     )
     p_all.set_defaults(func=_run_all)
 
@@ -377,8 +377,8 @@ def main() -> int:
     p_fn.add_argument(
         "--dataset-dir",
         type=Path,
-        default=Path("data/fakenewsnet/dataset"),
-        help="Index CSVs (default: data/fakenewsnet/dataset)",
+        default=Path("pipeline/fakenewsnet/dataset"),
+        help="Index CSVs (default: pipeline/fakenewsnet/dataset)",
     )
     p_fn.set_defaults(func=_run_fakenewsnet)
 

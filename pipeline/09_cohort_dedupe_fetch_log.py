@@ -8,8 +8,8 @@ Resume semantics stay correct: each ``sample_id`` appears once with its canonica
 
 Creates ``cohort_image_fetch.log.bak`` before overwriting (unless ``--dry-run``).
 
-    python scripts/09_cohort_dedupe_fetch_log.py
-    python scripts/09_cohort_dedupe_fetch_log.py --dry-run
+    python pipeline/09_cohort_dedupe_fetch_log.py
+    python pipeline/09_cohort_dedupe_fetch_log.py --dry-run
 """
 
 from __future__ import annotations

@@ -65,17 +65,18 @@ tmp/
 temp/
 *.tmp
 
-# --- Data / ML artifacts (keep raw datasets and produced artifacts out of git) ---
-# Official shallow clones (nested .git); update: git -C data/fakenewsnet pull etc.
-data/fakenewsnet/
-data/fakeddit/
-# Large generated / downloaded trees (keep only README.md tracked)
+# Upstream corpus clones under pipeline/ (nested .git — do not commit; clone per DATA_LAYOUT.md)
+pipeline/fakenewsnet/
+pipeline/fakeddit/
+
+# Large generated / downloaded trees under data/processed/
 data/processed/*
-!data/processed/README.md
 data/fakenews.tsv
 data/fake_news_final.tsv
 data/fakenews_with_image_fetch.tsv
 data/fakenews.tsv.original_copy
+# Full copies of data/ for local safety (timestamped; large)
+backups/
 datasets/
 *.h5
 *.hdf5

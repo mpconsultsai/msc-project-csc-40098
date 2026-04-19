@@ -9,8 +9,8 @@ Adds / updates columns:
 
 Streams the main TSV (hundreds of thousands of rows); creates a ``*.option1_merge.bak`` backup by default.
 
-    python scripts/12_cohort_merge_option1_into_fakenews.py
-    python scripts/12_cohort_merge_option1_into_fakenews.py --min-score 75 --dry-run
+    python pipeline/12_cohort_merge_option1_into_fakenews.py
+    python pipeline/12_cohort_merge_option1_into_fakenews.py --min-score 75 --dry-run
 """
 
 from __future__ import annotations

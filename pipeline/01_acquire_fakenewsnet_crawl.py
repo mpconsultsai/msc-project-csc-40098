@@ -9,18 +9,18 @@ Install (prefer a venv):
     pip install -r requirements-fakenewsnet-crawl.txt
 
 Run from any working directory; relative ``--out`` / ``--dataset-dir`` resolve to the **project root**
-(parent of ``scripts/``), not the shell cwd:
+(parent of ``pipeline/``), not the shell cwd:
 
-    python scripts/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --resume
+    python pipeline/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --resume
 
 Failures are appended to ``<out>/crawl_failures.jsonl`` (one JSON object per line). By default, rows whose
 ``(news_source, label, news_id)`` already appear there are **skipped** on later runs (saves time on dead URLs);
 use ``--retry-known-failures`` to fetch them again. Successful skips when using ``--resume`` are not logged
 unless you pass ``--log-skipped``.
 
-When the crawl run **finishes**, if ``scripts/05_consolidate_fakenews_tsv.py`` exists, ``all`` is invoked to refresh
+When the crawl run **finishes**, if ``pipeline/05_consolidate_fakenews_tsv.py`` exists, ``all`` is invoked to refresh
 ``data/fakenews.tsv`` (Fakeddit + FakeNewsNet image-ref rows). If that script is absent (common in this repo),
-pass ``--no-consolidate-image-refs`` or build ``data/fakenews.tsv`` separately per ``data/DATASETS_OVERVIEW.md``.
+pass ``--no-consolidate-image-refs`` or build ``data/fakenews.tsv`` separately per ``pipeline/DATASETS_OVERVIEW.md``.
 FNN rows from consolidation **exclude** keys still listed as failed in the failure log, use a **blank**
 ``split_official``, and only include items with ``news content.json`` on disk.
 
@@ -35,7 +35,7 @@ values like **4–8** can help but may increase **429/403** from sites—tune to
 
 If that fails, try the upstream file (older Python only):
 
-    pip install -r data/fakenewsnet/requirements.txt
+    pip install -r pipeline/fakenewsnet/requirements.txt
 """
 
 from __future__ import annotations
@@ -186,7 +186,7 @@ def main() -> int:
     parser.add_argument(
         "--dataset-dir",
         type=Path,
-        default=root / "data" / "fakenewsnet" / "dataset",
+        default=root / "pipeline" / "fakenewsnet" / "dataset",
         help="Directory with politifact_*.csv and gossipcop_*.csv",
     )
     parser.add_argument(
@@ -290,9 +290,9 @@ def main() -> int:
         file=sys.stderr,
     )
 
-    code_dir = root / "data" / "fakenewsnet" / "code"
+    code_dir = root / "pipeline" / "fakenewsnet" / "code"
     if not code_dir.is_dir():
-        print("Missing FakeNewsNet clone at data/fakenewsnet/code", file=sys.stderr)
+        print("Missing FakeNewsNet clone at pipeline/fakenewsnet/code", file=sys.stderr)
         return 1
     if not dataset_dir.is_dir():
         print(f"Dataset directory not found: {dataset_dir}", file=sys.stderr)
@@ -453,10 +453,10 @@ def main() -> int:
     if not args.no_consolidate_image_refs:
         tsv_out = _resolve_project_path(args.image_refs_out, root)
         fakeddit_root = _resolve_project_path(args.consolidate_fakeddit_root, root)
-        script = root / "scripts" / "05_consolidate_fakenews_tsv.py"
+        script = root / "pipeline" / "05_consolidate_fakenews_tsv.py"
         if not script.is_file():
             print(
-                "Skipping image-ref consolidation: scripts/05_consolidate_fakenews_tsv.py not found. "
+                "Skipping image-ref consolidation: pipeline/05_consolidate_fakenews_tsv.py not found. "
                 "Use --no-consolidate-image-refs to silence this, or add that script.",
                 file=sys.stderr,
             )
