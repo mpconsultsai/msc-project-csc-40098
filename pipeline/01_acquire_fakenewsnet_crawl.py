@@ -1,42 +1,20 @@
 """
-Crawl FakeNewsNet article bodies (and image URLs) from news_site URLs — no Twitter API.
+Crawl FakeNewsNet article text and image URLs from news-site links in the official CSVs.
 
-Upstream cannot redistribute full social data; official code needs Twitter keys + key server for
-tweets/retweets/profiles. This script reuses their news crawler only (newspaper3k + Wayback fallback).
+Uses the upstream FakeNewsNet news crawler (``pipeline/fakenewsnet/code``; newspaper3k + optional
+Wayback fallback). News articles only — not FNN's optional social/Twitter layer. Each story is saved as ``news content.json``
+under ``<out>/<source>/<label>/<id>/``; failed fetches are appended to ``<out>/crawl_failures.jsonl``.
 
-Install (prefer a venv):
+Re-runs are point-in-time snapshots — exact replication of a prior crawl is not expected (link rot,
+site changes, Wayback differences). Compare runs by story id, not identical JSON or failure counts.
+
+Relative ``--out`` and ``--dataset-dir`` paths resolve from the project root (parent of ``pipeline/``).
 
     pip install -r requirements-fakenewsnet-crawl.txt
-
-Run from any working directory; relative ``--out`` / ``--dataset-dir`` resolve to the **project root**
-(parent of ``pipeline/``), not the shell cwd:
-
     python pipeline/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --resume
-    python pipeline/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --max-articles 10
 
-Failures are appended to ``<out>/crawl_failures.jsonl`` (one JSON object per line). By default, rows whose
-``(news_source, label, news_id)`` already appear there are **skipped** on later runs (saves time on dead URLs);
-use ``--retry-known-failures`` to fetch them again. Successful skips when using ``--resume`` are not logged
-unless you pass ``--log-skipped``.
-
-When the crawl run **finishes**, if ``pipeline/04_consolidate_fakenews_tsv.py`` exists, ``all`` is invoked to refresh
-``data/fakenews.tsv`` (Fakeddit + FakeNewsNet image-ref rows). If that script is absent (common in this repo),
-pass ``--no-consolidate-image-refs`` or build ``data/fakenews.tsv`` separately per ``pipeline/DATASETS_OVERVIEW.md``.
-FNN rows from consolidation **exclude** keys still listed as failed in the failure log, use a **blank**
-``split_official``, and only include items with ``news content.json`` on disk.
-
-Many URLs are **dead** (404), **blocked** (403), or **rate-limited** (503) years after collection; that is
-normal, not a broken script. Upstream code logs noisy tracebacks; this script **silences** them unless you
-pass ``--verbose-crawl``.
-
-**Speed:** upstream code sleeps **2 seconds** after each download; this script caps that with
-``--post-download-sleep`` (default **0.2** s). Use ``--workers N`` (default **1**) for parallel I/O;
-values like **4–8** can help but may increase **429/403** from sites—tune to your network.
-``--no-wayback`` skips the Archive second pass (faster failures; fewer recoveries).
-
-If that fails, try the upstream file (older Python only):
-
-    pip install -r pipeline/fakenewsnet/requirements.txt
+Resume, failure-log skip logic, performance flags, and optional post-crawl consolidation: see
+``pipeline/README.md``, ``pipeline/DATASETS_OVERVIEW.md``, or ``--help``.
 """
 
 from __future__ import annotations
@@ -53,10 +31,18 @@ from typing import Any
 
 
 def _utc_iso() -> str:
+    """Return the current UTC time as an ISO-8601 string (seconds, no microseconds)."""
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def _append_jsonl(path: Path, row: dict, lock: threading.Lock | None = None) -> None:
+    """Append one JSON object as a line to a JSONL file.
+
+    Args:
+        path: Output log path; parent directories are created if missing.
+        row: JSON-serializable mapping written as a single line.
+        lock: Optional lock for thread-safe appends when ``--workers`` > 1.
+    """
     line = json.dumps(row, ensure_ascii=False) + "\n"
     if lock:
         with lock:
@@ -70,7 +56,11 @@ def _append_jsonl(path: Path, row: dict, lock: threading.Lock | None = None) -> 
 
 
 def _silence_upstream_crawl_logs() -> None:
-    """FakeNewsNet's crawler calls logging.exception() on every failed HTTP parse — very noisy."""
+    """Suppress noisy newspaper/urllib logging from upstream crawl failures.
+
+    Upstream calls ``logging.exception()`` on every failed HTTP parse. Silence unless
+    ``--verbose-crawl`` is set.
+    """
     import logging
 
     root = logging.getLogger()
@@ -82,7 +72,15 @@ def _silence_upstream_crawl_logs() -> None:
 
 
 def _load_known_failure_keys(path: Path) -> set[tuple[str, str, str]]:
-    """Unique (news_source, label, news_id) from prior failed events in the JSONL log."""
+    """Load unique failed story keys from a crawl failure JSONL log.
+
+    Args:
+        path: ``crawl_failures.jsonl`` (or equivalent append-only log).
+
+    Returns:
+        Set of ``(news_source, label, news_id)`` tuples with at least one ``event=failed`` row.
+        Empty if the file is missing or unreadable.
+    """
     keys: set[tuple[str, str, str]] = set()
     if not path.is_file():
         return keys
@@ -108,6 +106,14 @@ def _load_known_failure_keys(path: Path) -> set[tuple[str, str, str]]:
 
 
 def _load_existing_article(path: Path) -> dict | None:
+    """Read an existing ``news content.json`` file if present and valid JSON.
+
+    Args:
+        path: Path to ``news content.json`` for one story.
+
+    Returns:
+        Parsed JSON object, or ``None`` if the file is missing or corrupt.
+    """
     if not path.is_file():
         return None
     try:
@@ -117,7 +123,15 @@ def _load_existing_article(path: Path) -> dict | None:
 
 
 def _resolve_project_path(path: Path, project_root: Path) -> Path:
-    """Resolve a user path: absolute paths as-is; relative paths under project root (not cwd)."""
+    """Resolve a CLI path relative to the project root, not the shell cwd.
+
+    Args:
+        path: User-supplied path (may be relative or absolute).
+        project_root: Repository root (parent of ``pipeline/``).
+
+    Returns:
+        Absolute resolved path.
+    """
     path = path.expanduser()
     if path.is_absolute():
         return path.resolve()
@@ -125,7 +139,12 @@ def _resolve_project_path(path: Path, project_root: Path) -> Path:
 
 
 def _patch_upstream_post_download_sleep(news_content_module: Any, cap_seconds: float) -> None:
-    """FakeNewsNet uses time.sleep(2) after every download; cap it to speed up crawls."""
+    """Cap upstream ``time.sleep`` after each newspaper download.
+
+    Args:
+        news_content_module: Imported ``news_content_collection`` module (monkey-patched in place).
+        cap_seconds: Maximum sleep seconds per attempt (upstream default is 2s).
+    """
     cap = max(0.0, float(cap_seconds))
     real_sleep = news_content_module.time.sleep
 
@@ -144,7 +163,17 @@ def _process_single_item(
     save_dir: Path,
     crawl_fn: Any,
 ) -> dict[str, Any]:
-    """Fetch one article; return outcome dict (kind= ok | failed )."""
+    """Fetch one story and classify the outcome for logging or write.
+
+    Args:
+        news: Row from upstream ``DataCollector.load_news_file`` (``news_id``, ``news_url``).
+        save_dir: ``<out>/<source>/<label>/`` directory for this split.
+        crawl_fn: Callable accepting a URL and returning article JSON or ``None``.
+
+    Returns:
+        Dict with ``kind`` ``"ok"`` or ``"failed"``. On success includes ``out_json`` and
+        ``payload``; on failure includes ``reason``, ``detail``, ``news_id``, and ``news_url``.
+    """
     article_dir = save_dir / news.news_id
     out_json = article_dir / "news content.json"
     article_dir.mkdir(parents=True, exist_ok=True)
@@ -182,8 +211,19 @@ def _process_single_item(
 
 
 def main() -> int:
+    """Run the FakeNewsNet article crawl from CLI arguments.
+
+    Loads index CSVs, fetches articles via upstream ``crawl_news_article``, writes
+    ``news content.json`` and ``crawl_failures.jsonl``, then optionally invokes
+    ``04_consolidate_fakenews_tsv.py all``.
+
+    Returns:
+        ``0`` on success, ``1`` on invalid args or missing upstream clone/dataset paths.
+    """
     root = Path(__file__).resolve().parents[1]
-    parser = argparse.ArgumentParser(description="FakeNewsNet: news article crawl only (no Twitter).")
+    parser = argparse.ArgumentParser(
+        description="Crawl FakeNewsNet article JSON from index CSVs (newspaper3k; news articles only)."
+    )
     parser.add_argument(
         "--dataset-dir",
         type=Path,
@@ -326,6 +366,8 @@ def main() -> int:
         ncc.get_website_url_from_arhieve = lambda _url: None  # type: ignore[method-assign]
 
     class NewsOnlyConfig:
+        """Minimal config for ``DataCollector`` without upstream Twitter API wiring."""
+
         __slots__ = ("dataset_dir", "dump_location", "num_process")
 
         def __init__(self, dataset_dir: str, dump_location: str, num_process: int = 4) -> None:
@@ -334,6 +376,8 @@ def main() -> int:
             self.num_process = num_process
 
     class Loader(DataCollector):
+        """Upstream CSV loader; subclass satisfies upstream typing only."""
+
         pass
 
     choices = [
@@ -408,6 +452,7 @@ def main() -> int:
             queued_for_crawl += 1
 
         def apply_result(r: dict[str, Any]) -> None:
+            """Write a successful crawl to disk or append a failure row to the JSONL log."""
             nonlocal total_ok, total_failed
             if r["kind"] == "ok":
                 r["out_json"].write_text(json.dumps(r["payload"], ensure_ascii=False), encoding="utf-8")
@@ -466,7 +511,7 @@ def main() -> int:
             "skipped_resume": total_skipped,
             "skipped_known_failure": total_skipped_known_failure,
         },
-        "note": "Twitter/social features require upstream main.py + API keys per FakeNewsNet README.",
+        "note": "FNN's optional social/Twitter collection uses upstream main.py + API keys (see pipeline/fakenewsnet/README.md).",
     }
     (out / "_manifest.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 

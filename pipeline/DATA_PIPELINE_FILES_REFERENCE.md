@@ -1,12 +1,12 @@
 # Data pipeline — included files only
 
-Every path below exists in this repository (or is a **fixed output location** written by those scripts). Filenames under **`pipeline/`** use a **stage prefix** (`01_`–`11_`) for acquisition → QA → consolidate → cohort. **`pipeline/04_consolidate_fakenews_tsv.py`** builds **`data/fakenews.tsv`** from Fakeddit + FNN sources (see **`pipeline/DATASETS_OVERVIEW.md`** §7.2). Merge/export scripts assume **`data/fakenews.tsv`** is already present or created by consolidation.
+Every path below exists in this repository (or is a **fixed output location** written by those scripts). Filenames under **`pipeline/`** use a **stage prefix** (`01_`–`12_`) for acquisition → QA → consolidate → cohort. **`pipeline/04_consolidate_fakenews_tsv.py`** builds **`data/fakenews.tsv`** from Fakeddit + FNN sources (see **`pipeline/DATASETS_OVERVIEW.md`** §7.2). Merge/export scripts assume **`data/fakenews.tsv`** is already present or created by consolidation.
 
 **Interactive reporting / EDA** is in **`notebooks/fakenews_preprocessing_eda.ipynb`** (see **`reporting/README.md`**).
 
 ---
 
-## `pipeline/` (11 scripts)
+## `pipeline/` (12 scripts)
 
 | Stage | Path | Role in pipeline |
 |-------|------|------------------|
@@ -21,6 +21,7 @@ Every path below exists in this repository (or is a **fixed output location** wr
 | 04 cohort | `pipeline/09_cohort_merge_image_validation_into_fakenews.py` | Merge image-validation QC columns into `data/fakenews.tsv`. |
 | 04 cohort | `pipeline/10_cohort_merge_fetch_log_into_fakenews.py` | Merge fetch columns into `data/fakenews.tsv`. |
 | 04 cohort | `pipeline/11_cohort_export_final_tsv.py` | Write `data/fake_news_final.tsv` from `fakenews.tsv`. |
+| 04 cohort | `pipeline/12_cohort_export_modality_views.py` | Write modality views: `data/fake_news_final_text.tsv` (text restored from provenance) and `data/fake_news_final_image.tsv` (image-ready subset). |
 
 ---
 
@@ -63,6 +64,8 @@ Every path below exists in this repository (or is a **fixed output location** wr
 |------|-------------|
 | `data/fakenews.tsv` | `04_consolidate_fakenews_tsv.py` (initial build) or restore; **updated** by merge scripts. |
 | `data/fake_news_final.tsv` | `11_cohort_export_final_tsv.py`. |
+| `data/fake_news_final_text.tsv` | `12_cohort_export_modality_views.py`. |
+| `data/fake_news_final_image.tsv` | `12_cohort_export_modality_views.py`. |
 | `data/processed/cohorts/multimodal_plan_n50000_seed42.tsv` | Typical output of `05_cohort_build_plan.py` (name may vary with args). |
 | `data/processed/cohorts/image_validation/cohort_image_validation.tsv` | `08_cohort_image_validation.py`. |
 | `data/processed/cohorts/image_validation/cohort_image_validation_summary.log` | `08_cohort_image_validation.py`. |

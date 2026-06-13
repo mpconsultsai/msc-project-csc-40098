@@ -261,6 +261,7 @@ Stage prefixes match **`pipeline/README.md`**. Names below are **basename only**
 | `09_cohort_merge_image_validation_into_fakenews.py` | Adds `image_option1_*` columns to `data/fakenews.tsv`. |
 | `10_cohort_merge_fetch_log_into_fakenews.py` | Adds `cohort_image_*` / `cohort_multimodal_image_ok` columns. |
 | `11_cohort_export_final_tsv.py` | Writes `data/fake_news_final.tsv` (default: score ≥ 75). |
+| `12_cohort_export_modality_views.py` | Writes `data/fake_news_final_text.tsv` (re-attached `text`/`title_raw`/`article_url`) and `data/fake_news_final_image.tsv` (image-ready subset). |
 
 **Reporting / EDA (optional; see `reporting/README.md`)**
 
@@ -279,6 +280,7 @@ Run from the project root (adjust paths if you change defaults):
 5. **`python pipeline/09_cohort_merge_image_validation_into_fakenews.py`** — merge scores into `fakenews.tsv` (pass **`--no-backup`** to skip writing `*.image_validation_merge.bak`).
 6. **`python pipeline/10_cohort_merge_fetch_log_into_fakenews.py`** — merge fetch paths/status into `fakenews.tsv` (pass **`--no-backup`** to skip `*.cohort_fetch_merge.bak`).
 7. **`python pipeline/11_cohort_export_final_tsv.py`** — write `fake_news_final.tsv`.
+8. *(Goal 2 baselines)* **`python pipeline/12_cohort_export_modality_views.py`** — write `fake_news_final_text.tsv` and `fake_news_final_image.tsv`.
 
 *(Optional exploration after the relevant inputs exist:)* open **`notebooks/fakenews_preprocessing_eda.ipynb`** — see **`reporting/README.md`**.
 
