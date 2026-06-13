@@ -2,7 +2,7 @@
 Build ``data/fakenews.tsv`` from Fakeddit multimodal TSVs and FakeNewsNet ``news content.json`` trees.
 
 Run after **01** (FNN crawl) and **02** (Fakeddit metadata), or whenever the unified table needs
-refreshing. Output schema: ``pipeline/DATASETS_OVERVIEW.md`` §4. Paths resolve from the project root.
+refreshing. Output schema: ``pipeline/README.md`` (Unified table schema). Paths resolve from the project root.
 
     python pipeline/04_consolidate_fakenews_tsv.py all
     python pipeline/04_consolidate_fakenews_tsv.py fakeddit

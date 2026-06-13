@@ -9,7 +9,7 @@ Writes a plan TSV for ``06_cohort_fetch_images.py``. Paths resolve from the proj
     python pipeline/05_cohort_build_plan.py --n 50000 --seed 42
 
 Fakeddit split filtering, reserve sizing, and output shuffle: ``--help`` or
-``pipeline/DATASETS_OVERVIEW.md`` §7.
+``pipeline/README.md``.
 """
 
 from __future__ import annotations

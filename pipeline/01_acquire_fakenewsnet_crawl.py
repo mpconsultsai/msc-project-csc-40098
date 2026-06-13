@@ -14,7 +14,7 @@ Relative ``--out`` and ``--dataset-dir`` paths resolve from the project root (pa
     python pipeline/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --resume
 
 Resume, failure-log skip logic, performance flags, and optional post-crawl consolidation: see
-``pipeline/README.md``, ``pipeline/DATASETS_OVERVIEW.md``, or ``--help``.
+``pipeline/README.md`` or ``--help``.
 """
 
 from __future__ import annotations
