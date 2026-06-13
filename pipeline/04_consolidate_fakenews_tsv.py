@@ -1,22 +1,14 @@
 """
-Build ``data/fakenews.tsv`` from Fakeddit multimodal TSVs + FakeNewsNet ``news content.json`` trees.
+Build ``data/fakenews.tsv`` from Fakeddit multimodal TSVs and FakeNewsNet ``news content.json`` trees.
 
-**Where this fits:** run after **01** (FNN crawl) and **02** (Fakeddit v2 download), or whenever you need
-to refresh the unified table. **01** can invoke ``all`` automatically when this file exists (see
-``01_acquire_fakenewsnet_crawl.py``).
+Run after **01** (FNN crawl) and **02** (Fakeddit metadata), or whenever the unified table needs
+refreshing. Output schema: ``pipeline/DATASETS_OVERVIEW.md`` §4. Paths resolve from the project root.
 
-**Schema:** see ``pipeline/DATASETS_OVERVIEW.md`` §4. ``label_binary`` is ``0``/``1`` strings (1 = fake).
+    python pipeline/04_consolidate_fakenews_tsv.py all
+    python pipeline/04_consolidate_fakenews_tsv.py fakeddit
+    python pipeline/04_consolidate_fakenews_tsv.py fakenewsnet
 
-    python pipeline/04_consolidate_fakenews_tsv.py all \\
-        --input-root data/processed/fakeddit/v2_text_metadata \\
-        --collected data/processed/fakenewsnet \\
-        --failure-log data/processed/fakenewsnet/crawl_failures.jsonl \\
-        --out data/fakenews.tsv
-
-    python pipeline/04_consolidate_fakenews_tsv.py fakeddit --out data/fakenews.tsv
-    python pipeline/04_consolidate_fakenews_tsv.py fakenewsnet --collected data/processed/fakenewsnet --out data/fakenews.tsv
-
-Paths are relative to the **project root** (parent of ``pipeline/``).
+Subcommands, defaults, and FNN failure-log behaviour: ``--help``.
 """
 
 from __future__ import annotations
@@ -30,14 +22,12 @@ from typing import Any, Iterable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-# Fakeddit multimodal filenames → split_official (matches ``05_cohort_build_plan`` expectations).
 _FAKEDDIT_SPLIT: dict[str, str] = {
     "multimodal_train.tsv": "train",
     "multimodal_validate.tsv": "validation",
     "multimodal_test_public.tsv": "test",
 }
 
-# Output columns (§4); empty optional fields included for downstream scripts.
 _OUT_FIELDS = [
     "dataset",
     "sample_id",
@@ -68,12 +58,20 @@ _TRACKER_HOST_FRAGMENTS = (
 
 
 def _resolve(root: Path, p: Path) -> Path:
+    """Resolve a CLI path relative to the project root when not absolute."""
     p = p.expanduser()
     return p.resolve() if p.is_absolute() else (root / p).resolve()
 
 
 def _load_failure_keys(path: Path | None) -> set[tuple[str, str, str]]:
-    """(news_source, label, news_id) for event=failed lines."""
+    """Load FNN story keys to omit from consolidation.
+
+    Args:
+        path: ``crawl_failures.jsonl`` or ``None``.
+
+    Returns:
+        Set of ``(news_source, label, news_id)`` with at least one ``event=failed`` row.
+    """
     keys: set[tuple[str, str, str]] = set()
     if path is None or not path.is_file():
         return keys
@@ -102,6 +100,7 @@ def _load_failure_keys(path: Path | None) -> set[tuple[str, str, str]]:
 
 
 def _url_ok_for_ref(url: str) -> bool:
+    """Return True if ``url`` looks like a usable http(s) image candidate (not a tracker)."""
     u = url.strip()
     if not u or not u.startswith(("http://", "https://")):
         return False
@@ -112,6 +111,7 @@ def _url_ok_for_ref(url: str) -> bool:
 
 
 def _pick_image_ref(article: dict[str, Any]) -> str:
+    """Choose primary image URL from crawled article JSON (``top_img``, then ``images``)."""
     top = (article.get("top_img") or "").strip()
     if top and _url_ok_for_ref(top):
         return top
@@ -123,7 +123,14 @@ def _pick_image_ref(article: dict[str, Any]) -> str:
 
 
 def _load_fnn_index(dataset_dir: Path) -> dict[tuple[str, str, str], dict[str, str]]:
-    """(source, label, id) -> {news_url, title} from official CSVs."""
+    """Load FakeNewsNet index CSVs for article URLs and titles.
+
+    Args:
+        dataset_dir: Directory with ``politifact_*.csv`` and ``gossipcop_*.csv``.
+
+    Returns:
+        Map ``(source, label, news_id)`` → ``{news_url, title}``.
+    """
     try:
         csv.field_size_limit(sys.maxsize)
     except OverflowError:
@@ -159,6 +166,7 @@ def _load_fnn_index(dataset_dir: Path) -> dict[tuple[str, str, str], dict[str, s
 
 
 def _iter_fakeddit_rows(input_root: Path) -> Iterable[dict[str, str]]:
+    """Yield unified-schema rows from Fakeddit ``multimodal_*.tsv`` files under ``input_root``."""
     if not input_root.is_dir():
         return
     for tsv_path in sorted(input_root.rglob("*.tsv")):
@@ -207,6 +215,13 @@ def _iter_fnn_rows(
     index: dict[tuple[str, str, str], dict[str, str]],
     failure_keys: set[tuple[str, str, str]],
 ) -> Iterable[dict[str, str]]:
+    """Yield unified-schema rows from FNN ``news content.json`` trees.
+
+    Args:
+        collected: Root of the FNN crawl output (``<source>/<label>/<id>/``).
+        index: URL/title lookup from official index CSVs.
+        failure_keys: Story keys listed in ``crawl_failures.jsonl`` (skipped).
+    """
     if not collected.is_dir():
         return
     for json_path in sorted(collected.rglob("news content.json")):
@@ -264,6 +279,11 @@ def _iter_fnn_rows(
 
 
 def _write_tsv(path: Path, rows: Iterable[dict[str, str]]) -> int:
+    """Write rows to a tab-separated ``fakenews.tsv`` with ``_OUT_FIELDS`` columns.
+
+    Returns:
+        Number of data rows written (excluding header).
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     n = 0
     with path.open("w", encoding="utf-8", newline="") as fp:
@@ -276,6 +296,7 @@ def _write_tsv(path: Path, rows: Iterable[dict[str, str]]) -> int:
 
 
 def _run_fakeddit(args: argparse.Namespace) -> int:
+    """CLI handler: ``fakeddit`` subcommand — Fakeddit multimodal TSVs only."""
     root = _resolve(PROJECT_ROOT, Path(args.input_root))
     out = _resolve(PROJECT_ROOT, Path(args.out))
     n = _write_tsv(out, _iter_fakeddit_rows(root))
@@ -284,6 +305,7 @@ def _run_fakeddit(args: argparse.Namespace) -> int:
 
 
 def _run_fakenewsnet(args: argparse.Namespace) -> int:
+    """CLI handler: ``fakenewsnet`` subcommand — FNN crawled JSON only."""
     collected = _resolve(PROJECT_ROOT, Path(args.collected))
     dataset_dir = _resolve(PROJECT_ROOT, Path(args.dataset_dir))
     fl = _resolve(PROJECT_ROOT, Path(args.failure_log)) if args.failure_log else None
@@ -299,6 +321,7 @@ def _run_fakenewsnet(args: argparse.Namespace) -> int:
 
 
 def _run_all(args: argparse.Namespace) -> int:
+    """CLI handler: ``all`` subcommand — Fakeddit rows then FNN rows in one TSV."""
     input_root = _resolve(PROJECT_ROOT, Path(args.input_root))
     collected = _resolve(PROJECT_ROOT, Path(args.collected))
     failure_log = _resolve(PROJECT_ROOT, Path(args.failure_log)) if args.failure_log else None
@@ -318,6 +341,14 @@ def _run_all(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
+    """Parse subcommand and consolidate sources into ``data/fakenews.tsv``.
+
+    Subcommands: ``all`` (Fakeddit + FNN), ``fakeddit``, ``fakenewsnet``. For ``all`` and
+    ``fakenewsnet``, defaults ``--failure-log`` to ``<collected>/crawl_failures.jsonl`` when present.
+
+    Returns:
+        Exit code from the selected subcommand handler (``0`` on success).
+    """
     ap = argparse.ArgumentParser(description="Consolidate Fakeddit + FakeNewsNet into fakenews.tsv")
     sub = ap.add_subparsers(dest="cmd", required=True)
 

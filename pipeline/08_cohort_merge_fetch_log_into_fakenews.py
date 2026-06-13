@@ -1,24 +1,16 @@
 """
-Merge ``cohort_image_fetch.log`` into ``fakenews.tsv`` by ``sample_id`` (reference columns).
+Merge step 06 fetch log into ``fakenews.tsv`` by ``sample_id``.
 
-Adds / updates:
+Adds ``cohort_image_fetch_status``, ``cohort_image_local_path``, ``cohort_image_fetch_detail``, and
+``cohort_multimodal_image_ok``. Duplicate log lines: prefer ``ok`` over ``fail``, then latest
+``ts_utc``. Streams the main TSV and writes a ``*.cohort_fetch_merge.bak`` backup unless
+``--no-backup``. Close ``fakenews.tsv`` in the IDE before running on large files. Paths resolve
+from the project root.
 
-- ``cohort_image_fetch_status`` — ``ok`` | ``fail`` if this ``sample_id`` appears in the cohort fetch log; empty otherwise.
-- ``cohort_image_local_path`` — relative path from successful fetches (as logged).
-- ``cohort_image_fetch_detail`` — failure ``detail`` when status is ``fail``; empty for ``ok``.
-- ``cohort_multimodal_image_ok`` — ``true`` if status ``ok``, ``false`` if ``fail``, empty if never logged for this cohort run.
+    python pipeline/08_cohort_merge_fetch_log_into_fakenews.py
+    python pipeline/08_cohort_merge_fetch_log_into_fakenews.py --dry-run
 
-Duplicate ``sample_id`` lines in the log: **prefer ``ok`` over ``fail``**; if both same status, keep the **later** ``ts_utc``.
-
-**Interpretation:** Any row with a non-empty ``image_option1_validity_score`` should also have
-``cohort_multimodal_image_ok=true`` and a ``cohort_image_local_path`` (validation only scans ``ok`` log lines).
-Rows with ``fail`` in the log never get a validity score. Rows absent from the log were not part of this
-cohort fetch attempt.
-
-Streams ``fakenews.tsv``; writes ``*.cohort_fetch_merge.bak`` unless ``--no-backup``.
-
-    python pipeline/10_cohort_merge_fetch_log_into_fakenews.py
-    python pipeline/10_cohort_merge_fetch_log_into_fakenews.py --dry-run
+Backup and custom paths: ``--help``.
 """
 
 from __future__ import annotations
@@ -42,16 +34,32 @@ NEW_COLS = [COL_STATUS, COL_PATH, COL_DETAIL, COL_OK]
 
 
 def _resolve(root: Path, p: Path) -> Path:
+    """Resolve a CLI path relative to the project root when not absolute."""
     return p.resolve() if p.is_absolute() else (root / p).resolve()
 
 
 def _ts_sort_key(raw: str) -> str:
-    """ISO-ish timestamps sort lexicographically for same format."""
+    """Normalize a timestamp string for lexicographic comparison.
+
+    Args:
+        raw: ``ts_utc`` value from the fetch log.
+
+    Returns:
+        Stripped string (ISO-8601 UTC sorts correctly when formats match).
+    """
     return (raw or "").strip()
 
 
 def _load_fetch_log(path: Path) -> dict[str, dict[str, str]]:
-    """sample_id -> {status, local_path, detail, ts_utc}."""
+    """Collapse fetch log to one record per ``sample_id``.
+
+    Args:
+        path: ``cohort_image_fetch.log`` from step 06 (dedupe with step 07 first).
+
+    Returns:
+        Map ``sample_id -> {status, local_path, detail, ts_utc}``. Prefers ``ok`` over ``fail``;
+        on tie, keeps the row with the latest ``ts_utc``.
+    """
     best: dict[str, dict[str, str]] = {}
     with path.open(encoding="utf-8", newline="") as fp:
         r = csv.DictReader(fp, delimiter="\t")
@@ -80,6 +88,20 @@ def _load_fetch_log(path: Path) -> dict[str, dict[str, str]]:
 
 
 def main() -> int:
+    """Merge cohort image fetch outcomes into ``fakenews.tsv``.
+
+    Loads the fetch log into memory, streams ``--fakenews`` row by row, and writes a temp file
+    that replaces the original after optional backup.
+
+    Args (CLI):
+        ``--fakenews``: Main table (default ``data/fakenews.tsv``).
+        ``--fetch-log``: Step 06 output (default ``data/processed/images/cohort_image_fetch.log``).
+        ``--dry-run``: Count matches only; do not write.
+        ``--no-backup``: Skip ``*.cohort_fetch_merge.bak`` before replace.
+
+    Returns:
+        ``0`` on success, ``1`` if inputs are missing or the fakenews header is invalid.
+    """
     ap = argparse.ArgumentParser(description="Merge cohort_image_fetch.log into fakenews.tsv")
     ap.add_argument("--fakenews", type=Path, default=DEFAULT_FAKENEWS)
     ap.add_argument("--fetch-log", type=Path, default=DEFAULT_FETCH_LOG)

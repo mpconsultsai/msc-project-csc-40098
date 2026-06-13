@@ -1,17 +1,13 @@
 """
-Deduplicate ``cohort_image_fetch.log`` to **one line per ``sample_id``**.
+Deduplicate ``cohort_image_fetch.log`` to one row per ``sample_id`` (optional QA after step 06).
 
-- If any attempt was **ok**, the kept row is the **latest** ``ok`` (by ``ts_utc``).
-- Otherwise the kept row is the **latest** ``fail``.
+Keeps the latest ``ok`` row when any succeeded; otherwise the latest ``fail``. Does not change
+which ids step 06 skips on resume — only removes duplicate log lines. Creates ``.bak`` unless
+``--dry-run``. Default log: ``data/processed/images/cohort_image_fetch.log``.
 
-Resume semantics stay correct: each ``sample_id`` appears once with its canonical outcome.
-
-Creates ``cohort_image_fetch.log.bak`` before overwriting (unless ``--dry-run``).
-
-    python pipeline/07_cohort_dedupe_fetch_log.py
-    python pipeline/07_cohort_dedupe_fetch_log.py --dry-run
+    python pipeline/07_qa_cohort_dedupe_fetch_log.py
+    python pipeline/07_qa_cohort_dedupe_fetch_log.py --dry-run
 """
-
 from __future__ import annotations
 
 import argparse
@@ -27,10 +23,12 @@ DEFAULT_LOG = Path("data/processed/images/cohort_image_fetch.log")
 
 
 def _resolve(p: Path) -> Path:
+    """Resolve a CLI path relative to the project root when not absolute."""
     return p.resolve() if p.is_absolute() else (PROJECT_ROOT / p).resolve()
 
 
 def _parse_ts(raw: str) -> datetime:
+    """Parse ``ts_utc`` from a fetch-log row (ISO-8601, optional trailing ``Z``)."""
     s = (raw or "").strip()
     if s.endswith("Z"):
         s = s[:-1] + "+00:00"
@@ -38,6 +36,16 @@ def _parse_ts(raw: str) -> datetime:
 
 
 def _pick_best(rows: list[dict[str, str]]) -> dict[str, str]:
+    """Choose the canonical log row for one ``sample_id``.
+
+    Prefers the latest ``ok`` row; if none, the latest ``fail``; otherwise latest by timestamp.
+
+    Args:
+        rows: All log rows for a single ``sample_id``.
+
+    Returns:
+        The row to keep after deduplication.
+    """
     oks = [r for r in rows if (r.get("status") or "").strip().lower() == "ok"]
     if oks:
         return max(oks, key=lambda r: _parse_ts(r.get("ts_utc") or ""))
@@ -48,6 +56,15 @@ def _pick_best(rows: list[dict[str, str]]) -> dict[str, str]:
 
 
 def main() -> int:
+    """Deduplicate the cohort image fetch log to one line per ``sample_id``.
+
+    Args (CLI):
+        ``--log``: Fetch log path (default ``data/processed/images/cohort_image_fetch.log``).
+        ``--dry-run``: Print counts only; do not write or backup.
+
+    Returns:
+        ``0`` on success, ``1`` if the log is missing or has no header.
+    """
     ap = argparse.ArgumentParser(description="Deduplicate cohort_image_fetch.log (one row per sample_id)")
     ap.add_argument("--log", type=Path, default=DEFAULT_LOG)
     ap.add_argument("--dry-run", action="store_true")

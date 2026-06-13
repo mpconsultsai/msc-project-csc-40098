@@ -26,6 +26,14 @@ DEFAULT_LOG = Path("data/processed/fakenewsnet/crawl_failures.jsonl")
 
 
 def _parse_ts(raw: str | None) -> datetime | None:
+    """Parse a UTC timestamp string from a failure-log row.
+
+    Args:
+        raw: Value of the ``ts`` field (ISO-8601, optionally with trailing ``Z``).
+
+    Returns:
+        Timezone-aware ``datetime``, or ``None`` if missing or unparseable.
+    """
     if not raw or not isinstance(raw, str):
         return None
     s = raw.strip()
@@ -41,6 +49,15 @@ def _parse_ts(raw: str | None) -> datetime | None:
 
 
 def _key_from_obj(o: dict) -> tuple[str, str, str] | None:
+    """Extract a normalized story key from one JSONL object.
+
+    Args:
+        o: Parsed JSON object from a log line.
+
+    Returns:
+        ``(news_source, label, news_id)`` if ``event`` is ``failed`` and fields are present;
+        otherwise ``None``.
+    """
     if o.get("event") != "failed":
         return None
     try:
@@ -55,6 +72,18 @@ def _key_from_obj(o: dict) -> tuple[str, str, str] | None:
 
 
 def main() -> int:
+    """Deduplicate ``crawl_failures.jsonl`` to one row per failed story id.
+
+    Keeps the row with the latest ``ts`` for each ``(news_source, label, news_id)``. Writes a
+    ``.bak`` backup before replacing the log unless ``--dry-run`` is set.
+
+    Args (CLI):
+        ``--log``: Path to JSONL (default ``data/processed/fakenewsnet/crawl_failures.jsonl``).
+        ``--dry-run``: Print summary counts only; do not write or backup.
+
+    Returns:
+        ``0`` on success, ``1`` if the log file is missing.
+    """
     ap = argparse.ArgumentParser(description="Deduplicate FNN crawl_failures.jsonl (latest ts wins)")
     ap.add_argument(
         "--log",

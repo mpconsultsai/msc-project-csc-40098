@@ -1,18 +1,13 @@
 """
-Download images listed in a cohort plan TSV (from ``05_cohort_build_plan.py``).
+Download images from the cohort plan TSV produced by ``05_cohort_build_plan.py``.
 
-Writes one file per row under ``data/processed/images/`` using a **sanitised** ``sample_id`` as the
-stem (e.g. ``fd_9b85vf.jpg``). **Single-threaded**, append-only log, idempotent **resume**: any
-``sample_id`` that already appears in ``cohort_image_fetch.log`` (**ok or fail**) is skipped; the log
-is the only resume signal (no scanning the image folder). Stale URLs are assumed to keep failing, so
-``fail`` rows are not retried unless you use ``--force``, a fresh ``--log``, or edit the log.
-
-Paths resolve from the project root (parent of ``pipeline/``).
+Writes one image per ``sample_id`` under ``data/processed/images/`` and appends outcomes to
+``cohort_image_fetch.log``. Resume is log-based: any ``sample_id`` already logged as ok or fail is
+skipped unless ``--force``. Paths resolve from the project root.
 
     python -u pipeline/06_cohort_fetch_images.py --plan-tsv data/processed/cohorts/multimodal_plan_n50000_seed42.tsv
-    python -u pipeline/06_cohort_fetch_images.py --plan-tsv ... --limit 100
-    python -u pipeline/06_cohort_fetch_images.py --plan-tsv ... --stop-after-ok 50000
-    python -u pipeline/06_cohort_fetch_images.py --plan-tsv ... --force
+
+Limits, stop-after-ok, placeholder blocklist, and retry behaviour: ``--help``.
 """
 
 from __future__ import annotations
@@ -51,19 +46,23 @@ _USER_AGENT = (
 
 
 def _log(msg: str) -> None:
+    """Print a progress message to stderr with flush."""
     print(msg, file=sys.stderr, flush=True)
 
 
 def _resolve(root: Path, p: Path) -> Path:
+    """Resolve a CLI path relative to the project root when not absolute."""
     return p.resolve() if p.is_absolute() else (root / p).resolve()
 
 
 def _sanitize_sample_id(sample_id: str) -> str:
+    """Make ``sample_id`` safe for use as a filename stem."""
     t = _FILENAME_BAD.sub("_", (sample_id or "").strip())
     return t if t else "unknown"
 
 
 def _guess_ext_from_url(url: str) -> str:
+    """Infer a file extension from the URL path, defaulting to ``.jpg``."""
     try:
         path = urlparse(url).path
         lower = path.lower()
@@ -76,6 +75,7 @@ def _guess_ext_from_url(url: str) -> str:
 
 
 def _ext_from_content_type(ct: str | None) -> str | None:
+    """Map HTTP ``Content-Type`` to a file extension, or ``None`` if unknown."""
     if not ct:
         return None
     key = ct.split(";")[0].strip().lower()
@@ -83,6 +83,7 @@ def _ext_from_content_type(ct: str | None) -> str | None:
 
 
 def _load_sha256_blocklist(path: Path) -> frozenset[str]:
+    """Load hex SHA-256 hashes of known placeholder images to reject after download."""
     if not path.is_file():
         return frozenset()
     out: set[str] = set()
@@ -94,6 +95,7 @@ def _load_sha256_blocklist(path: Path) -> frozenset[str]:
 
 
 def _append_log(log_path: Path, fields: list[str]) -> None:
+    """Append one tab-separated line to the fetch log."""
     log_path.parent.mkdir(parents=True, exist_ok=True)
     line = "\t".join(f.replace("\t", " ").replace("\n", " ") for f in fields) + "\n"
     with log_path.open("a", encoding="utf-8") as fp:
@@ -101,6 +103,7 @@ def _append_log(log_path: Path, fields: list[str]) -> None:
 
 
 def _ensure_log_header(log_path: Path, header: str) -> None:
+    """Write the log header if the file is missing or empty."""
     log_path.parent.mkdir(parents=True, exist_ok=True)
     if log_path.exists() and log_path.stat().st_size > 0:
         return
@@ -109,7 +112,14 @@ def _ensure_log_header(log_path: Path, header: str) -> None:
 
 
 def _load_logged_sample_ids(log_path: Path) -> set[str]:
-    """Every ``sample_id`` that appears in the log (``ok`` or ``fail``): treat as already handled."""
+    """Return ``sample_id`` values already handled in the fetch log (ok or fail).
+
+    Args:
+        log_path: ``cohort_image_fetch.log`` or equivalent TSV.
+
+    Returns:
+        Set of sample ids to skip on resume (unless ``--force``).
+    """
     if not log_path.is_file():
         return set()
     out: set[str] = set()
@@ -131,6 +141,7 @@ def _load_logged_sample_ids(log_path: Path) -> set[str]:
 
 
 def _count_ok_lines_in_log(log_path: Path) -> int:
+    """Count rows with ``status=ok`` in the fetch log (for ``--stop-after-ok``)."""
     n = 0
     if not log_path.is_file():
         return 0
@@ -151,6 +162,17 @@ def _download_one(
     timeout: float,
     reject_sha256: frozenset[str],
 ) -> tuple[bool, str, Path | None]:
+    """Download one image URL to disk with basic size, hash, and PIL checks.
+
+    Args:
+        url: Image URL from the plan row.
+        dest: Target path (extension may be adjusted from Content-Type).
+        timeout: HTTP timeout in seconds.
+        reject_sha256: Placeholder hashes to reject after download.
+
+    Returns:
+        ``(success, detail_or_empty, written_path)``. On failure, ``written_path`` is ``None``.
+    """
     import requests
     from PIL import Image
 
@@ -196,6 +218,21 @@ def _download_one(
 
 
 def main() -> int:
+    """Fetch cohort plan images and append results to ``cohort_image_fetch.log``.
+
+    Reads ``--plan-tsv``, downloads each row's ``image_ref``, writes files under ``--out-dir``,
+    and skips ``sample_id`` values already present in the log unless ``--force``.
+
+    Args (CLI):
+        ``--plan-tsv``: Cohort plan from step 05.
+        ``--out-dir`` / ``--log``: Image folder and append-only fetch log.
+        ``--limit``: Cap download attempts this run.
+        ``--stop-after-ok``: Stop once total ok rows in log reach N.
+        ``--force``: Retry rows already logged as fail.
+
+    Returns:
+        ``0`` on success, ``1`` if the plan TSV is missing.
+    """
     ap = argparse.ArgumentParser(description="Fetch cohort plan images (sanitised sample_id filenames, resume-friendly)")
     ap.add_argument(
         "--plan-tsv",

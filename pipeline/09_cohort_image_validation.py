@@ -1,21 +1,14 @@
 """
-Cohort image validation: cheap file/pixel heuristics + a 1–100 **validity score** (experimental).
+Score downloaded cohort images with cheap heuristics (after ``08_cohort_merge_fetch_log_into_fakenews.py``).
 
-Reads ``ok`` rows from ``cohort_image_fetch.log``, opens each ``local_path``, and writes:
+Reads ``ok`` rows from ``cohort_image_fetch.log`` (from step 06), assigns a 1–100 ``validity_score``
+and QC flags per image, and writes outputs under ``data/processed/cohorts/image_validation/``. The
+score is a heuristic (not ground truth). Paths resolve from the project root.
 
-- ``data/processed/cohorts/image_validation/cohort_image_validation.tsv`` — one row per image; after each run the file is
-  **rewritten sorted** by ``validity_score`` **ascending** (lowest first), then ``sample_id``.
-- ``data/processed/cohorts/image_validation/cohort_image_validation_summary.log`` — run header + score quantiles + flag counts.
+    python pipeline/09_cohort_image_validation.py
+    python pipeline/09_cohort_image_validation.py --resume
 
-The score is a **heuristic** (“how photo-like / training-friendly under these rules”), not ground truth.
-Tune buckets in ``_score_from_metrics`` after you compare samples.
-
-    python pipeline/08_cohort_image_validation.py
-    python pipeline/08_cohort_image_validation.py --limit 500
-    python pipeline/08_cohort_image_validation.py --resume
-    python pipeline/08_cohort_image_validation.py --sort-only
-
-Optional: ``pip install imagehash`` for a perceptual hash column (near-duplicate work later).
+Resume, limits, sort-only, and step 10 merge: ``--help``.
 """
 
 from __future__ import annotations
@@ -47,11 +40,14 @@ except ImportError:
 
 
 def _resolve(root: Path, p: Path) -> Path:
+    """Resolve a CLI path relative to the project root when not absolute."""
     return p.resolve() if p.is_absolute() else (root / p).resolve()
 
 
 @dataclass
 class Metrics:
+    """Pixel/file measurements and QC flags for one local image."""
+
     ok: bool = False
     error: str = ""
     width: int = 0
@@ -66,6 +62,15 @@ class Metrics:
 
 
 def _analyze_image(path: Path, max_side_stats: int) -> Metrics:
+    """Open an image and compute size, format, entropy/variance, and heuristic flags.
+
+    Args:
+        path: Local image file from the fetch log.
+        max_side_stats: Downscale longer side before entropy/variance (speed).
+
+    Returns:
+        ``Metrics`` with ``ok=True`` when PIL decoded the file.
+    """
     m = Metrics()
     try:
         m.file_bytes = path.stat().st_size
@@ -132,6 +137,14 @@ def _analyze_image(path: Path, max_side_stats: int) -> Metrics:
 
 
 def _format_points(fmt: str) -> int:
+    """Score contribution from image format (JPEG/WEBP preferred).
+
+    Args:
+        fmt: PIL format string (e.g. ``JPEG``, ``PNG``).
+
+    Returns:
+        Points in ``4..12``.
+    """
     f = (fmt or "").upper()
     if f in ("JPEG", "JPG", "WEBP"):
         return 12
@@ -147,6 +160,15 @@ def _format_points(fmt: str) -> int:
 
 
 def _resolution_points(w: int, h: int) -> int:
+    """Score contribution from shorter side length (CNN-friendly sizes score higher).
+
+    Args:
+        w: Image width in pixels.
+        h: Image height in pixels.
+
+    Returns:
+        Points in ``0..24`` based on ``min(w, h)`` thresholds.
+    """
     s = min(w, h)
     if s >= 256:
         return 24
@@ -166,6 +188,14 @@ def _resolution_points(w: int, h: int) -> int:
 
 
 def _aspect_points(ar: float) -> int:
+    """Score contribution from width/height aspect ratio (near-square preferred).
+
+    Args:
+        ar: ``max(w, h) / min(w, h)``.
+
+    Returns:
+        Points in ``0..18``; extreme ratios score lower.
+    """
     if ar <= 1.5:
         return 18
     if ar <= 2.0:
@@ -182,7 +212,15 @@ def _aspect_points(ar: float) -> int:
 
 
 def _texture_points(entropy: float, variance: float) -> int:
-    """Grayscale entropy (0..~8); variance of uint8 pixels."""
+    """Score contribution from grayscale entropy and pixel variance.
+
+    Args:
+        entropy: Shannon entropy of the downscaled gray histogram (0–~8).
+        variance: Variance of uint8 gray pixels.
+
+    Returns:
+        Points in ``0..30``; flat or low-contrast images score lower.
+    """
     if entropy < 1.5:
         base = 4
     elif entropy < 2.5:
@@ -204,7 +242,14 @@ def _texture_points(entropy: float, variance: float) -> int:
 
 
 def _score_from_metrics(m: Metrics) -> int:
-    """Return integer 1..100 (heuristic training-facing validity)."""
+    """Combine metric sub-scores into a single training-facing validity score.
+
+    Args:
+        m: Decoded image metrics from ``_analyze_image``.
+
+    Returns:
+        Integer ``1..100`` (heuristic; higher ≈ more photo-like under these rules).
+    """
     if not m.ok:
         return 1
 
@@ -226,6 +271,14 @@ def _score_from_metrics(m: Metrics) -> int:
 
 
 def _phash(path: Path) -> str:
+    """Compute perceptual hash string when ``imagehash`` is installed.
+
+    Args:
+        path: Local image file.
+
+    Returns:
+        Hex phash string, or ``""`` if ``imagehash`` is missing or decode fails.
+    """
     if imagehash is None:
         return ""
     try:
@@ -259,7 +312,14 @@ VALIDATION_FIELDNAMES = [
 
 
 def _rewrite_tsv_sorted_by_score(tsv_path: Path) -> int:
-    """Sort all data rows by validity_score ascending, then sample_id. Returns row count or 0 if skipped."""
+    """Sort all data rows by ``validity_score`` ascending, then ``sample_id``.
+
+    Args:
+        tsv_path: Validation TSV to rewrite in place via a temp file.
+
+    Returns:
+        Row count written, or ``0`` if the file is missing or empty.
+    """
     if not tsv_path.is_file() or tsv_path.stat().st_size == 0:
         return 0
     with tsv_path.open(encoding="utf-8", newline="") as fp:
@@ -298,6 +358,14 @@ def _rewrite_tsv_sorted_by_score(tsv_path: Path) -> int:
 
 
 def _load_done_sample_ids(tsv_path: Path) -> set[str]:
+    """Load ``sample_id`` values already present in the validation TSV.
+
+    Args:
+        tsv_path: ``cohort_image_validation.tsv`` or equivalent.
+
+    Returns:
+        Set of non-empty ``sample_id`` strings (for ``--resume`` skipping).
+    """
     if not tsv_path.is_file():
         return set()
     out: set[str] = set()
@@ -311,6 +379,23 @@ def _load_done_sample_ids(tsv_path: Path) -> set[str]:
 
 
 def main() -> int:
+    """Score cohort fetch-log images and write validation TSV + summary log.
+
+    Reads ``ok`` rows from ``--fetch-log``, opens each ``local_path``, assigns
+    ``validity_score`` and QC flags, then rewrites the TSV sorted by score ascending.
+    Feeds step **10** (merge into ``fakenews.tsv``).
+
+    Args (CLI):
+        ``--fetch-log``: Input from step 06 (default ``data/processed/images/cohort_image_fetch.log``).
+        ``--out-dir``: Output folder (default ``data/processed/cohorts/image_validation/``).
+        ``--resume``: Skip ``sample_id`` already in the validation TSV.
+        ``--limit``: Process at most N new rows this run.
+        ``--sort-only``: Re-sort existing TSV only; no image I/O.
+        ``--no-phash``: Skip perceptual hash even if ``imagehash`` is installed.
+
+    Returns:
+        ``0`` on success, ``1`` if the fetch log or validation TSV is missing when required.
+    """
     ap = argparse.ArgumentParser(description="Cohort image validation + 1–100 validity score")
     ap.add_argument("--fetch-log", type=Path, default=DEFAULT_FETCH_LOG)
     ap.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)

@@ -1,13 +1,12 @@
 """
-Download Fakeddit v2.0 text/metadata from Google Drive (default).
+Download Fakeddit v2.0 text/metadata TSVs from Google Drive.
 
-Image archive and comment folders are **opt-in** (`--images`, `--comments`) — large and not required
-for TSV-based multimodal work if you use `image_url` or skip images entirely.
+Writes multimodal train/validation/test TSVs under ``<out>/v2_text_metadata/`` (labels, text fields,
+``image_url``, etc.). This is the usual acquire step before ``04_consolidate_fakenews_tsv.py``.
 
-Official links: pipeline/fakeddit/README.md. Requires: pip install gdown
+Requires: ``pip install gdown``. Official links: ``pipeline/fakeddit/README.md``.
 
     python pipeline/02_acquire_fakeddit_metadata.py --out data/processed/fakeddit
-    python pipeline/02_acquire_fakeddit_metadata.py --images --comments   # full Drive mirror
 """
 
 from __future__ import annotations
@@ -19,17 +18,31 @@ from pathlib import Path
 
 
 V2_FOLDER = "https://drive.google.com/drive/folders/1jU7qgDqU1je9Y0PMKJ_f31yXRo5uWGFm"
-IMAGE_ARCHIVE = "https://drive.google.com/uc?id=1cjY6HsHaSZuLVHywIxD5xQqng33J5S2b"
-COMMENTS_FOLDER = "https://drive.google.com/drive/folders/150sL4SNi5zFK8nmllv5prWbn0LyvLzvo"
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Download Fakeddit assets from Google Drive (gdown).")
+    """Download Fakeddit v2 text/metadata from Google Drive (gdown).
+
+    Fetches the official v2 folder into ``<out>/v2_text_metadata/``. That output feeds the
+    consolidated ``data/fakenews.tsv`` build; images are fetched later from ``image_url`` in the
+    cohort pipeline, not from this step.
+
+    Args (CLI):
+        ``--out``: Download root (default ``data/processed/fakeddit``).
+        ``--skip-text``: Skip the metadata folder (unusual).
+        ``--remaining-ok``: Pass through to gdown when the Drive folder fetch is partial.
+
+    Returns:
+        ``0`` on success, ``1`` if gdown is not installed.
+    """
+    parser = argparse.ArgumentParser(
+        description="Download Fakeddit v2 text/metadata TSVs from Google Drive (gdown)."
+    )
     parser.add_argument(
         "--out",
         type=Path,
         default=Path("data/processed/fakeddit"),
-        help="Root for Fakeddit downloads (default: data/processed/fakeddit → v2_text_metadata/, etc.)",
+        help="Download root; metadata TSVs go in <out>/v2_text_metadata/ (default: data/processed/fakeddit)",
     )
     parser.add_argument("--skip-text", action="store_true", help="Skip v2.0 TSV / metadata folder")
     parser.add_argument(
@@ -61,22 +74,6 @@ def main() -> int:
         gdown.download_folder(
             V2_FOLDER,
             output=str(text_dir),
-            quiet=False,
-            remaining_ok=args.remaining_ok,
-        )
-
-    if args.images:
-        img_path = out / "fakeddit_images_archive"
-        print("Downloading image archive (large)…")
-        gdown.download(IMAGE_ARCHIVE, str(img_path), quiet=False, fuzzy=True)
-
-    if args.comments:
-        cdir = out / "comments"
-        cdir.mkdir(parents=True, exist_ok=True)
-        print("Downloading comment data folder…")
-        gdown.download_folder(
-            COMMENTS_FOLDER,
-            output=str(cdir),
             quiet=False,
             remaining_ok=args.remaining_ok,
         )

@@ -46,7 +46,7 @@ git -C "pipeline/fakenewsnet" pull
 
 - **Remote:** [github.com/entitize/Fakeddit](https://github.com/entitize/Fakeddit)
 - **Local:** `pipeline/fakeddit/` — README and helper scripts.
-- **TSVs (default):** `python pipeline/02_acquire_fakeddit_metadata.py` → **`data/processed/fakeddit/v2_text_metadata/`** (no images/comments unless you pass **`--images`** / **`--comments`**).
+- **TSVs:** `python pipeline/02_acquire_fakeddit_metadata.py` → **`data/processed/fakeddit/v2_text_metadata/`**
 
 Update clone:
 

@@ -1,19 +1,15 @@
 """
-Merge ``cohort_image_validation.tsv`` into the working ``fakenews.tsv`` by ``sample_id``.
+Merge step 09 validation scores into ``fakenews.tsv`` by ``sample_id``.
 
-Adds / updates columns:
+Adds ``image_option1_validity_score``, ``image_option1_qc_flags``, and
+``image_option1_training_eligible`` (``true`` when score >= ``--min-score``). Streams the main
+TSV and writes a ``*.image_validation_merge.bak`` backup unless ``--no-backup``. Close
+``fakenews.tsv`` in the IDE before running on large files. Paths resolve from the project root.
 
-- ``image_option1_validity_score`` — integer string from the validation sweep (empty if not in validation TSV).
-- ``image_option1_qc_flags`` — comma-separated flags from image validation (empty if none / not validated).
-- ``image_option1_training_eligible`` — ``true`` if score >= ``--min-score``, else ``false`` when a score exists.
+    python pipeline/10_cohort_merge_image_validation_into_fakenews.py
+    python pipeline/10_cohort_merge_image_validation_into_fakenews.py --dry-run
 
-Streams the main TSV (hundreds of thousands of rows); creates a ``*.image_validation_merge.bak`` backup by default
-(unless ``--no-backup``). **Close ``fakenews.tsv`` in the IDE** before running — some editors reload the file on
-change and can hang or crash on multi‑hundred‑MB files.
-
-    python pipeline/09_cohort_merge_image_validation_into_fakenews.py
-    python pipeline/09_cohort_merge_image_validation_into_fakenews.py --min-score 75 --dry-run
-    python pipeline/09_cohort_merge_image_validation_into_fakenews.py --no-backup
+``--min-score``, backup, and progress interval: ``--help``.
 """
 
 from __future__ import annotations
@@ -36,11 +32,19 @@ NEW_COLS = [COL_SCORE, COL_FLAGS, COL_ELIGIBLE]
 
 
 def _resolve(root: Path, p: Path) -> Path:
+    """Resolve a CLI path relative to the project root when not absolute."""
     return p.resolve() if p.is_absolute() else (root / p).resolve()
 
 
 def _load_validation(path: Path) -> dict[str, tuple[str, str]]:
-    """sample_id -> (validity_score, flags)."""
+    """Load validation TSV keyed by ``sample_id``.
+
+    Args:
+        path: ``cohort_image_validation.tsv`` from step 09.
+
+    Returns:
+        Map ``sample_id -> (validity_score, flags)``; later rows overwrite earlier ones.
+    """
     out: dict[str, tuple[str, str]] = {}
     with path.open(encoding="utf-8", newline="") as fp:
         r = csv.DictReader(fp, delimiter="\t")
@@ -55,6 +59,22 @@ def _load_validation(path: Path) -> dict[str, tuple[str, str]]:
 
 
 def main() -> int:
+    """Merge validation scores into ``fakenews.tsv`` and set training-eligibility columns.
+
+    Loads the validation TSV into memory, streams ``--fakenews`` row by row, and writes a temp
+    file that replaces the original after optional backup.
+
+    Args (CLI):
+        ``--fakenews``: Main table (default ``data/fakenews.tsv``).
+        ``--validation``: Step 09 output (default ``cohort_image_validation.tsv``).
+        ``--min-score``: ``image_option1_training_eligible=true`` when score >= N (default 75).
+        ``--dry-run``: Count matches only; do not write.
+        ``--no-backup``: Skip ``*.image_validation_merge.bak`` before replace.
+        ``--progress-every``: Stderr progress every N rows (default 50000; 0 = quiet).
+
+    Returns:
+        ``0`` on success, ``1`` if inputs are missing or the fakenews header is invalid.
+    """
     ap = argparse.ArgumentParser(description="Merge cohort image validation scores into fakenews.tsv")
     ap.add_argument("--fakenews", type=Path, default=DEFAULT_FAKENEWS)
     ap.add_argument("--validation", type=Path, default=DEFAULT_VALIDATION)

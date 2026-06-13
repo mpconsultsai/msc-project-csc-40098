@@ -1,27 +1,15 @@
 """
-Build a **fixed, seeded, stratified** multimodal cohort plan (primary + per-stratum reserves).
+Build a fixed, seeded, stratified multimodal cohort plan from ``data/fakenews.tsv``.
 
-Rows are stratified by ``(dataset, label_binary)`` and allocated proportionally to ``--n`` (default
-50000). Within each stratum, a deterministic shuffle picks **primary** rows first, then **reserve**
-rows for backfill when image download fails.
+Reads rows with ``has_image_ref=true``, splits them by ``(dataset, label_binary)``, allocates
+``--n`` primary slots proportionally per stratum, and adds reserve rows for image-fetch backfill.
+Writes a plan TSV for ``06_cohort_fetch_images.py``. Paths resolve from the project root.
 
-**Fakeddit official split (default):** only ``split_official`` in ``train`` and ``validation`` are
-eligible — **``test`` is excluded** so the training cohort does not leak the public test set. Use
-``--include-fakeddit-test`` to include all three splits (not recommended for benchmark-aligned training).
-**FakeNewsNet:** all eligible rows are kept (``split_official`` is often blank in the consolidated TSV).
+    python pipeline/05_cohort_build_plan.py
+    python pipeline/05_cohort_build_plan.py --n 50000 --seed 42
 
-Output TSV (default ``data/processed/cohorts/multimodal_plan_n{N}_seed{SEED}.tsv``) columns::
-
-    dataset, label_binary, split_official, sample_id, image_ref, stratum_key, plan_role, stratum_order
-
-**Next step:** run ``06_cohort_fetch_images.py`` on this plan.
-
-**Row order:** the full plan is **shuffled** with the same ``--seed`` after rows are built. That avoids
-listing one entire corpus (e.g. all Fakeddit primary+reserve) before another when ``fakenews.tsv`` is
-ordered by ``dataset``, which would otherwise starve downstream fetches for the second corpus until
-tens of thousands of rows are processed.
-
-Paths resolve from the project root (parent of ``pipeline/``).
+Fakeddit split filtering, reserve sizing, and output shuffle: ``--help`` or
+``pipeline/DATASETS_OVERVIEW.md`` §7.
 """
 
 from __future__ import annotations
@@ -37,7 +25,15 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _largest_remainder_allocation(counts: dict[str, int], total: int) -> dict[str, int]:
-    """Proportional integer allocation summing exactly to ``total``."""
+    """Allocate ``total`` integer slots across strata in proportion to ``counts``.
+
+    Args:
+        counts: Eligible row count per stratum key.
+        total: Target number of primary slots to distribute.
+
+    Returns:
+        Per-key integer allocation summing exactly to ``min(total, sum(counts))`` (or zeros if empty).
+    """
     keys = list(counts.keys())
     n_eligible = sum(counts.values())
     if n_eligible == 0 or total <= 0:
@@ -53,6 +49,21 @@ def _largest_remainder_allocation(counts: dict[str, int], total: int) -> dict[st
 
 
 def main() -> int:
+    """Build stratified cohort plan TSV from ``fakenews.tsv``.
+
+    Filters to multimodal-eligible rows, applies Fakeddit split rules, assigns primary and reserve
+    roles per stratum, optionally shuffles output order, and writes the plan for step 06.
+
+    Args (CLI):
+        ``--input-tsv``: Consolidated table (default ``data/fakenews.tsv``).
+        ``--n`` / ``--seed``: Target cohort size and RNG seed (default 50000 / 42).
+        ``--reserve-multiplier``: Extra reserve rows per stratum after primary allocation.
+        ``--fakeddit-splits`` / ``--include-fakeddit-test``: Which Fakeddit official splits to include.
+        ``--no-shuffle-output``: Keep stratum-block order instead of interleaved shuffle.
+
+    Returns:
+        ``0`` on success, ``1`` if input is missing or ``--fakeddit-splits`` is empty.
+    """
     ap = argparse.ArgumentParser(description="Build stratified multimodal cohort plan (primary + reserves)")
     ap.add_argument(
         "--input-tsv",

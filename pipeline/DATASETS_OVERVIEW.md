@@ -11,7 +11,7 @@ This note summarises **what you have on disk**, **what the crawl/download steps 
 | **FakeNewsNet** | [KaiDMML/FakeNewsNet](https://github.com/KaiDMML/FakeNewsNet) | News articles (PolitiFact + GossipCop indices); article bodies and image URLs via **local crawl**, not a redistributed archive. |
 | **Fakeddit** | [entitize/Fakeddit](https://github.com/entitize/Fakeddit); TSVs from Google Drive | Reddit multimodal benchmark (title + `image_url`); **official splits** in filenames. |
 
-**Out of scope here:** full Twitter social graph collection for FakeNewsNet (requires API keys and upstream `main.py`); Fakeddit **image archive** and **comment** dumps unless you opt in via `pipeline/02_acquire_fakeddit_metadata.py --images` / `--comments`.
+**Out of scope here:** full Twitter social graph collection for FakeNewsNet (requires API keys and upstream `main.py`); Fakeddit **image archive** and **comment** dumps (not downloaded by this pipeline).
 
 ---
 
@@ -235,7 +235,7 @@ Stage prefixes match **`pipeline/README.md`**. Names below are **basename only**
 | Script | Role |
 |--------|------|
 | `01_acquire_fakenewsnet_crawl.py` | Crawl FNN article JSON under `data/processed/fakenewsnet/`. |
-| `02_acquire_fakeddit_metadata.py` | Download Fakeddit v2 text/metadata from Drive (optional `--images`, `--comments`). |
+| `02_acquire_fakeddit_metadata.py` | Download Fakeddit v2 text/metadata TSVs from Drive. |
 | `requirements-fakenewsnet-crawl.txt` | Python deps for the FNN crawl on recent Python versions. |
 
 **FNN crawl diagnostics**
@@ -256,10 +256,10 @@ Stage prefixes match **`pipeline/README.md`**. Names below are **basename only**
 |--------|------|
 | `05_cohort_build_plan.py` | Build stratified plan TSV (e.g. `data/processed/cohorts/multimodal_plan_n50000_seed42.tsv`). |
 | `06_cohort_fetch_images.py` | Download images for plan rows; append `data/processed/images/cohort_image_fetch.log`. Uses `pipeline/reddit_placeholder_sha256.txt`. |
-| `07_cohort_dedupe_fetch_log.py` | Optional: dedupe cohort log after parallel mistakes. |
-| `08_cohort_image_validation.py` | Heuristic image QC → `data/processed/cohorts/image_validation/` (`cohort_image_validation.tsv`). |
-| `09_cohort_merge_image_validation_into_fakenews.py` | Adds `image_option1_*` columns to `data/fakenews.tsv`. |
-| `10_cohort_merge_fetch_log_into_fakenews.py` | Adds `cohort_image_*` / `cohort_multimodal_image_ok` columns. |
+| `07_qa_cohort_dedupe_fetch_log.py` | Optional: dedupe cohort log after parallel mistakes. |
+| `08_cohort_merge_fetch_log_into_fakenews.py` | Adds `cohort_image_*` / `cohort_multimodal_image_ok` columns. |
+| `09_cohort_image_validation.py` | Heuristic image QC → `data/processed/cohorts/image_validation/` (`cohort_image_validation.tsv`). |
+| `10_cohort_merge_image_validation_into_fakenews.py` | Adds `image_option1_*` columns to `data/fakenews.tsv`. |
 | `11_cohort_export_final_tsv.py` | Writes `data/fake_news_final.tsv` (default: score ≥ 75). |
 | `12_cohort_export_modality_views.py` | Writes `data/fake_news_final_text.tsv` (re-attached `text`/`title_raw`/`article_url`) and `data/fake_news_final_image.tsv` (image-ready subset). |
 
@@ -275,10 +275,10 @@ Run from the project root (adjust paths if you change defaults):
 
 1. **`python pipeline/05_cohort_build_plan.py`** — create/refresh the cohort plan TSV (set `--input`, `--n`, `--seed` as needed).
 2. **`python pipeline/06_cohort_fetch_images.py`** — fetch until target successes (e.g. `--stop-after-ok 50000`). Uses plan + blocklist.
-3. *(Optional)* **`python pipeline/07_cohort_dedupe_fetch_log.py`** — if the log contains duplicate `sample_id` lines.
-4. **`python pipeline/08_cohort_image_validation.py`** — full validation sweep (`--resume` as needed); then **`python pipeline/08_cohort_image_validation.py --sort-only`** if you only need re-sorting.
-5. **`python pipeline/09_cohort_merge_image_validation_into_fakenews.py`** — merge scores into `fakenews.tsv` (pass **`--no-backup`** to skip writing `*.image_validation_merge.bak`).
-6. **`python pipeline/10_cohort_merge_fetch_log_into_fakenews.py`** — merge fetch paths/status into `fakenews.tsv` (pass **`--no-backup`** to skip `*.cohort_fetch_merge.bak`).
+3. *(Optional)* **`python pipeline/07_qa_cohort_dedupe_fetch_log.py`** — if the log contains duplicate `sample_id` lines.
+4. **`python pipeline/08_cohort_merge_fetch_log_into_fakenews.py`** — merge fetch paths/status into `fakenews.tsv` (pass **`--no-backup`** to skip `*.cohort_fetch_merge.bak`).
+5. **`python pipeline/09_cohort_image_validation.py`** — full validation sweep (`--resume` as needed); then **`python pipeline/09_cohort_image_validation.py --sort-only`** if you only need re-sorting.
+6. **`python pipeline/10_cohort_merge_image_validation_into_fakenews.py`** — merge scores into `fakenews.tsv` (pass **`--no-backup`** to skip writing `*.image_validation_merge.bak`).
 7. **`python pipeline/11_cohort_export_final_tsv.py`** — write `fake_news_final.tsv`.
 8. *(Goal 2 baselines)* **`python pipeline/12_cohort_export_modality_views.py`** — write `fake_news_final_text.tsv` and `fake_news_final_image.tsv`.
 

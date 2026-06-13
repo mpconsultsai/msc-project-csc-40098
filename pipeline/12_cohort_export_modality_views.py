@@ -1,21 +1,14 @@
 """
-Create modality-specific cohort views for Goal 2 baselines from ``fake_news_final.tsv``.
+Build text-only and image-only training views from ``fake_news_final.tsv`` (after step 11).
 
-Single-pass step:
-1) Restores text fields from ``provenance`` (Fakeddit TSV / FNN JSON),
-2) Writes a text-only baseline TSV with text-relevant attributes,
-3) Writes an image-only baseline TSV with image-relevant attributes.
+Restores ``text`` / ``title_raw`` / ``article_url`` from each row's ``provenance`` file, then writes
+``fake_news_final_text.tsv`` (all gated rows) and ``fake_news_final_image.tsv`` (image-eligible rows
+with a local path). Used for Goal 2 single-modality baselines and by ``training/``. Paths resolve
+from the project root.
 
-Outputs:
-    - ``data/fake_news_final_text.tsv``
-    - ``data/fake_news_final_image.tsv``
-
-Usage:
     python pipeline/12_cohort_export_modality_views.py
-    python pipeline/12_cohort_export_modality_views.py \
-        --input data/fake_news_final.tsv \
-        --text-out data/fake_news_final_text.tsv \
-        --image-out data/fake_news_final_image.tsv
+
+Custom input/output paths: ``--help``.
 """
 
 from __future__ import annotations
@@ -62,11 +55,23 @@ IMAGE_FIELDS = [
 
 
 def _resolve(root: Path, p: Path) -> Path:
+    """Resolve a CLI path relative to the project root when not absolute."""
     p = p.expanduser()
     return p.resolve() if p.is_absolute() else (root / p).resolve()
 
 
 def _read_final_rows(inp: Path) -> tuple[list[str], list[dict[str, str]]]:
+    """Load all rows from the gated final cohort TSV.
+
+    Args:
+        inp: ``fake_news_final.tsv`` or equivalent.
+
+    Returns:
+        ``(fieldnames, rows)`` from the file header and body.
+
+    Raises:
+        ValueError: If the file has no header row.
+    """
     with inp.open(encoding="utf-8", newline="") as fp:
         reader = csv.DictReader(fp, delimiter="\t")
         if not reader.fieldnames:
@@ -76,9 +81,14 @@ def _read_final_rows(inp: Path) -> tuple[list[str], list[dict[str, str]]]:
 
 
 def _extract_fakeddit_text(tsv_path: Path, wanted_ids: set[str]) -> Dict[str, tuple[str, str, str]]:
-    """
-    Return map: sample_id -> (text, title_raw, article_url).
-    article_url is empty for Fakeddit.
+    """Read title/text for Fakeddit rows referenced by ``sample_id``.
+
+    Args:
+        tsv_path: Fakeddit multimodal TSV from ``provenance``.
+        wanted_ids: ``fd:…`` sample IDs to load from this file.
+
+    Returns:
+        Map ``sample_id -> (text, title_raw, article_url)``; URL is always empty for Fakeddit.
     """
     out: Dict[str, tuple[str, str, str]] = {}
     if not tsv_path.is_file():
@@ -100,8 +110,13 @@ def _extract_fakeddit_text(tsv_path: Path, wanted_ids: set[str]) -> Dict[str, tu
 
 
 def _extract_fnn_text(json_path: Path) -> tuple[str, str, str]:
-    """
-    Extract (text, title_raw, article_url) from FNN crawled JSON.
+    """Read text fields from one FakeNewsNet ``news content.json`` file.
+
+    Args:
+        json_path: Crawled article JSON from ``provenance``.
+
+    Returns:
+        ``(text, title_raw, article_url)``; empty strings if missing or unreadable.
     """
     if not json_path.is_file():
         return ("", "", "")
@@ -118,10 +133,18 @@ def _extract_fnn_text(json_path: Path) -> tuple[str, str, str]:
 
 
 def _truthy(v: str) -> bool:
+    """Return True for common truthy string values (``true``, ``1``, ``yes``)."""
     return str(v).strip().lower() in {"true", "1", "yes"}
 
 
 def _write_tsv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
+    """Write one tab-separated file with header and rows.
+
+    Args:
+        path: Output TSV path (parent dirs created if needed).
+        fieldnames: Column order for the header and each row.
+        rows: Row dicts; missing keys become empty strings.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as fp:
         w = csv.DictWriter(fp, fieldnames=fieldnames, delimiter="\t", extrasaction="ignore")
@@ -131,6 +154,20 @@ def _write_tsv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) ->
 
 
 def main() -> int:
+    """Export text-only and image-only training TSVs from the gated final cohort.
+
+    Reads ``--input``, restores text from ``provenance`` (Fakeddit TSV or FNN JSON), writes
+    ``--text-out`` with one row per input row and ``--image-out`` with rows that pass image
+    fetch + training-eligibility gates and have a ``cohort_image_local_path``.
+
+    Args (CLI):
+        ``--input``: Gated cohort from step 11 (default ``data/fake_news_final.tsv``).
+        ``--text-out``: Text baseline export (default ``data/fake_news_final_text.tsv``).
+        ``--image-out``: Image baseline export (default ``data/fake_news_final_image.tsv``).
+
+    Returns:
+        ``0`` on success, ``1`` if input is missing, invalid, or lacks required columns.
+    """
     ap = argparse.ArgumentParser(description="Build text-only and image-only final cohort views")
     ap.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     ap.add_argument("--text-out", type=Path, default=DEFAULT_TEXT_OUTPUT)

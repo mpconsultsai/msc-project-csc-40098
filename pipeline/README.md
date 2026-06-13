@@ -29,10 +29,10 @@ Names are ordered **01–12** by typical pipeline position. **Cohort** steps (05
 | 04 | `04_consolidate_fakenews_tsv.py` | **Consolidate** — build `data/fakenews.tsv` from Fakeddit + FNN |
 | 05 | `05_cohort_build_plan.py` | Cohort — stratified plan TSV |
 | 06 | `06_cohort_fetch_images.py` | Cohort — fetch images for plan rows |
-| 07 | `07_cohort_dedupe_fetch_log.py` | Cohort — dedupe cohort fetch log |
-| 08 | `08_cohort_image_validation.py` | Cohort — heuristic image QC + validity score |
-| 09 | `09_cohort_merge_image_validation_into_fakenews.py` | Cohort — merge image validation into `fakenews.tsv` |
-| 10 | `10_cohort_merge_fetch_log_into_fakenews.py` | Cohort — merge fetch paths into `fakenews.tsv` |
+| 07 | `07_qa_cohort_dedupe_fetch_log.py` | QA — dedupe cohort fetch log |
+| 08 | `08_cohort_merge_fetch_log_into_fakenews.py` | Cohort — merge fetch paths into `fakenews.tsv` |
+| 09 | `09_cohort_image_validation.py` | Cohort — heuristic image QC + validity score |
+| 10 | `10_cohort_merge_image_validation_into_fakenews.py` | Cohort — merge image validation into `fakenews.tsv` |
 | 11 | `11_cohort_export_final_tsv.py` | Cohort — export `fake_news_final.tsv` |
 | 12 | `12_cohort_export_modality_views.py` | Cohort — create text/image modality exports (`fake_news_final_text.tsv`, `fake_news_final_image.tsv`) |
 

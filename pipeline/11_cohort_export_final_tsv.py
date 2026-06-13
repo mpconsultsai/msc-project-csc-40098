@@ -1,14 +1,13 @@
 """
-Export rows from ``fakenews.tsv`` that pass the validity-score training gate (default: score >= 75).
+Export training-gated rows from ``fakenews.tsv`` to ``fake_news_final.tsv`` (after step 10).
 
-Writes ``data/fake_news_final.tsv`` with the **same columns** as the input (typically the 50k cohort
-subset that is both successfully fetched and QC-eligible).
-
-Default threshold is **inclusive** (>= 75), matching ``image_option1_training_eligible=true``.
-Use ``--min-score 76`` if you require strictly greater than 75.
+Keeps rows with ``image_option1_validity_score`` >= ``--min-score`` (default 75, inclusive).
+Output has the same columns as the input. Paths resolve from the project root.
 
     python pipeline/11_cohort_export_final_tsv.py
     python pipeline/11_cohort_export_final_tsv.py --min-score 76
+
+Custom input/output paths: ``--help``.
 """
 
 from __future__ import annotations
@@ -26,10 +25,25 @@ SCORE_COL = "image_option1_validity_score"
 
 
 def _resolve(root: Path, p: Path) -> Path:
+    """Resolve a CLI path relative to the project root when not absolute."""
     return p.resolve() if p.is_absolute() else (root / p).resolve()
 
 
 def main() -> int:
+    """Filter ``fakenews.tsv`` by validity score and write ``fake_news_final.tsv``.
+
+    Scans ``--input`` row by row; keeps rows with a numeric
+    ``image_option1_validity_score`` >= ``--min-score``. Rows with empty or non-numeric scores
+    are skipped.
+
+    Args (CLI):
+        ``--input``: Main table with merged validation columns (default ``data/fakenews.tsv``).
+        ``--output``: Gated export path (default ``data/fake_news_final.tsv``).
+        ``--min-score``: Inclusive threshold (default 75; use 76 for strictly above 75).
+
+    Returns:
+        ``0`` on success, ``1`` if input is missing, has no header, or lacks ``image_option1_validity_score``.
+    """
     ap = argparse.ArgumentParser(description="Export fakenews rows with validity score >= min-score")
     ap.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     ap.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
@@ -61,7 +75,7 @@ def main() -> int:
             return 1
         if SCORE_COL not in reader.fieldnames:
             print(
-                f"Input has no column {SCORE_COL!r}; run 09_cohort_merge_image_validation_into_fakenews.py first.",
+                f"Input has no column {SCORE_COL!r}; run 10_cohort_merge_image_validation_into_fakenews.py first.",
                 file=sys.stderr,
             )
             return 1

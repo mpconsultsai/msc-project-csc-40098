@@ -16,10 +16,10 @@ Every path below exists in this repository (or is a **fixed output location** wr
 | 03 consolidate | `pipeline/04_consolidate_fakenews_tsv.py` | Build `data/fakenews.tsv` from Fakeddit multimodal TSVs + FNN `news content.json` (+ optional `crawl_failures.jsonl` filter). |
 | 04 cohort | `pipeline/05_cohort_build_plan.py` | Build stratified cohort plan TSV under `data/processed/cohorts/`. |
 | 04 cohort | `pipeline/06_cohort_fetch_images.py` | Cohort image fetch → `cohort_image_fetch.log` + image files. |
-| 04 cohort | `pipeline/07_cohort_dedupe_fetch_log.py` | Dedupe `cohort_image_fetch.log`. |
-| 04 cohort | `pipeline/08_cohort_image_validation.py` | Image QC + validity score → `data/processed/cohorts/image_validation/`. |
-| 04 cohort | `pipeline/09_cohort_merge_image_validation_into_fakenews.py` | Merge image-validation QC columns into `data/fakenews.tsv`. |
-| 04 cohort | `pipeline/10_cohort_merge_fetch_log_into_fakenews.py` | Merge fetch columns into `data/fakenews.tsv`. |
+| 04 cohort | `pipeline/07_qa_cohort_dedupe_fetch_log.py` | Dedupe `cohort_image_fetch.log`. |
+| 04 cohort | `pipeline/08_cohort_merge_fetch_log_into_fakenews.py` | Merge fetch columns into `data/fakenews.tsv`. |
+| 04 cohort | `pipeline/09_cohort_image_validation.py` | Image QC + validity score → `data/processed/cohorts/image_validation/`. |
+| 04 cohort | `pipeline/10_cohort_merge_image_validation_into_fakenews.py` | Merge image-validation QC columns into `data/fakenews.tsv`. |
 | 04 cohort | `pipeline/11_cohort_export_final_tsv.py` | Write `data/fake_news_final.tsv` from `fakenews.tsv`. |
 | 04 cohort | `pipeline/12_cohort_export_modality_views.py` | Write modality views: `data/fake_news_final_text.tsv` (text restored from provenance) and `data/fake_news_final_image.tsv` (image-ready subset). |
 
@@ -67,8 +67,8 @@ Every path below exists in this repository (or is a **fixed output location** wr
 | `data/fake_news_final_text.tsv` | `12_cohort_export_modality_views.py`. |
 | `data/fake_news_final_image.tsv` | `12_cohort_export_modality_views.py`. |
 | `data/processed/cohorts/multimodal_plan_n50000_seed42.tsv` | Typical output of `05_cohort_build_plan.py` (name may vary with args). |
-| `data/processed/cohorts/image_validation/cohort_image_validation.tsv` | `08_cohort_image_validation.py`. |
-| `data/processed/cohorts/image_validation/cohort_image_validation_summary.log` | `08_cohort_image_validation.py`. |
+| `data/processed/cohorts/image_validation/cohort_image_validation.tsv` | `09_cohort_image_validation.py`. |
+| `data/processed/cohorts/image_validation/cohort_image_validation_summary.log` | `09_cohort_image_validation.py`. |
 | `data/processed/images/` | Image files + `cohort_image_fetch.log` from `06_cohort_fetch_images.py`. |
 | `data/processed/fakenewsnet/` | `01_acquire_fakenewsnet_crawl.py` (article JSON, `crawl_failures.jsonl`, etc.). |
 
