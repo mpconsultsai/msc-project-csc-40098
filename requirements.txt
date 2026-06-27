@@ -1,8 +1,8 @@
-# MSc project — notebook + EDA (pin for reproducibility)
 jupyter>=1.0.0,<2
 ipykernel>=6.29.0,<7
 pandas>=2.1.0,<3
 numpy>=1.26.0,<3
+scikit-learn>=1.4.0,<2
 matplotlib>=3.8.0,<4
 seaborn>=0.13.0,<0.14
 requests>=2.28.0,<3

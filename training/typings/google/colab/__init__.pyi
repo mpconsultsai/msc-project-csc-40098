@@ -1,0 +1,3 @@
+class files:
+    @staticmethod
+    def upload() -> dict[str, bytes]: ...

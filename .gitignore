@@ -65,16 +65,13 @@ tmp/
 temp/
 *.tmp
 
-# Upstream corpus clones under pipeline/ (nested .git — do not commit; clone per DATA_LAYOUT.md)
+# Upstream corpus clones under pipeline/ (nested .git — do not commit; clone per pipeline/README.md)
 pipeline/fakenewsnet/
 pipeline/fakeddit/
 
 # Large generated / downloaded trees under data/processed/
-data/processed/*
-data/fakenews.tsv
-data/fake_news_final.tsv
-data/fakenews_with_image_fetch.tsv
-data/fakenews.tsv.original_copy
+data/*
+
 # Full copies of data/ for local safety (timestamped; large)
 backups/
 datasets/
@@ -120,3 +117,5 @@ Desktop.ini
 *.crt
 *.cer
 *.der
+
+.vscode/

@@ -1,6 +1,13 @@
 {
   "venvPath": ".",
   "venv": ".venv",
-  "extraPaths": ["pipeline/fakenewsnet/code"],
-  "executionEnvironments": [{ "root": "." }, { "root": "notebooks" }]
+  "extraPaths": ["pipeline/fakenewsnet/code", "training", "ui"],
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none",
+  "executionEnvironments": [
+    { "root": "." },
+    { "root": "notebooks" },
+    { "root": "training", "extraPaths": ["."] },
+    { "root": "ui", "extraPaths": ["../training", "."] }
+  ]
 }

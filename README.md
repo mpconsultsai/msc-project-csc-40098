@@ -1,6 +1,6 @@
 # MSc project — multimodal fake-news data preparation
 
-This repository is a **data preprocessing pipeline** for two public corpora — **FakeNewsNet (FNN)** and **Fakeddit** — so downstream work can use aligned **text and image** fields for machine learning (multimodal fake-news detection). It does not train models here; it focuses on acquisition, normalization into a unified table, image fetching, and quality gating. Numbered steps live under **`pipeline/`**; generated tables and downloads go under **`data/`** (see **`pipeline/DATA_LAYOUT.md`** for clones and commands).
+This repository is a **data preprocessing pipeline** for two public corpora — **FakeNewsNet (FNN)** and **Fakeddit** — so downstream work can use aligned **text and image** fields for machine learning (multimodal fake-news detection). It does not train models here; it focuses on acquisition, normalization into a unified table, image fetching, and quality gating. Numbered steps live under **`pipeline/`**; generated tables and downloads go under **`data/`** (see **[`pipeline/README.md`](pipeline/README.md)**).
 
 **What you get**
 
@@ -12,11 +12,9 @@ This repository is a **data preprocessing pipeline** for two public corpora — 
 
 | Doc | Purpose |
 |-----|---------|
-| [pipeline/DATA_LAYOUT.md](pipeline/DATA_LAYOUT.md) | Clone locations, install lines, commands to run crawls/downloads |
-| [pipeline/DATASETS_OVERVIEW.md](pipeline/DATASETS_OVERVIEW.md) | Schema, counts, limitations, full cohort step order (section 7) |
-| [pipeline/DATA_PIPELINE_FILES_REFERENCE.md](pipeline/DATA_PIPELINE_FILES_REFERENCE.md) | Inventory of every `pipeline/` script and canonical output paths |
-| [pipeline/README.md](pipeline/README.md) | Stage order (01–11) for numbered pipeline scripts |
+| [pipeline/README.md](pipeline/README.md) | Pipeline flow, scripts 01–12, schema, clone commands, outputs |
 | [reporting/README.md](reporting/README.md) | Interactive reporting / EDA (`notebooks/fakenews_preprocessing_eda.ipynb`) |
+| [training/README.md](training/README.md) | Model training on final cohort TSVs |
 
 **Python environment**
 
