@@ -32,19 +32,11 @@ _OUT_FIELDS = [
     "dataset",
     "sample_id",
     "split_official",
-    "split_study",
+    "domain",
     "label_binary",
     "label_fine",
-    "text",
-    "title_raw",
     "image_ref",
     "has_image_ref",
-    "image_local_path",
-    "image_download_ok",
-    "image_preprocessed_path",
-    "image_training_ready",
-    "article_url",
-    "domain",
     "provenance",
 ]
 
@@ -122,49 +114,6 @@ def _pick_image_ref(article: dict[str, Any]) -> str:
     return ""
 
 
-def _load_fnn_index(dataset_dir: Path) -> dict[tuple[str, str, str], dict[str, str]]:
-    """Load FakeNewsNet index CSVs for article URLs and titles.
-
-    Args:
-        dataset_dir: Directory with ``politifact_*.csv`` and ``gossipcop_*.csv``.
-
-    Returns:
-        Map ``(source, label, news_id)`` → ``{news_url, title}``.
-    """
-    try:
-        csv.field_size_limit(sys.maxsize)
-    except OverflowError:
-        csv.field_size_limit(2**31 - 1)
-    out: dict[tuple[str, str, str], dict[str, str]] = {}
-    if not dataset_dir.is_dir():
-        return out
-    for name in (
-        "politifact_fake.csv",
-        "politifact_real.csv",
-        "gossipcop_fake.csv",
-        "gossipcop_real.csv",
-    ):
-        p = dataset_dir / name
-        if not p.is_file():
-            continue
-        parts = name.replace(".csv", "").split("_")
-        if len(parts) < 2:
-            continue
-        src = parts[0].lower()
-        lbl = parts[1].lower()
-        with p.open(encoding="utf-8", newline="") as fp:
-            r = csv.DictReader(fp)
-            for row in r:
-                nid = str(row.get("id") or "").strip()
-                if not nid:
-                    continue
-                out[(src, lbl, nid)] = {
-                    "news_url": (row.get("news_url") or "").strip(),
-                    "title": (row.get("title") or "").strip(),
-                }
-    return out
-
-
 def _iter_fakeddit_rows(input_root: Path) -> Iterable[dict[str, str]]:
     """Yield unified-schema rows from Fakeddit ``multimodal_*.tsv`` files under ``input_root``."""
     if not input_root.is_dir():
@@ -181,8 +130,6 @@ def _iter_fakeddit_rows(input_root: Path) -> Iterable[dict[str, str]]:
                 if not rid:
                     continue
                 image_url = (row.get("image_url") or "").strip()
-                clean_title = (row.get("clean_title") or row.get("title") or "").strip()
-                title_raw = (row.get("title") or "").strip()
                 v_lb = row.get("2_way_label")
                 s_lb = str(v_lb).strip() if v_lb is not None and v_lb != "" else ""
                 lb = s_lb if s_lb in ("0", "1") else ""
@@ -193,18 +140,10 @@ def _iter_fakeddit_rows(input_root: Path) -> Iterable[dict[str, str]]:
                     "dataset": "fakeddit",
                     "sample_id": f"fd:{rid}",
                     "split_official": split_off,
-                    "split_study": "",
                     "label_binary": lb if lb in ("0", "1") else "",
                     "label_fine": fine,
-                    "text": clean_title,
-                    "title_raw": title_raw,
                     "image_ref": image_url,
                     "has_image_ref": has_ref,
-                    "image_local_path": "",
-                    "image_download_ok": "",
-                    "image_preprocessed_path": "",
-                    "image_training_ready": "",
-                    "article_url": "",
                     "domain": sub,
                     "provenance": prov,
                 }
@@ -212,14 +151,12 @@ def _iter_fakeddit_rows(input_root: Path) -> Iterable[dict[str, str]]:
 
 def _iter_fnn_rows(
     collected: Path,
-    index: dict[tuple[str, str, str], dict[str, str]],
     failure_keys: set[tuple[str, str, str]],
 ) -> Iterable[dict[str, str]]:
     """Yield unified-schema rows from FNN ``news content.json`` trees.
 
     Args:
         collected: Root of the FNN crawl output (``<source>/<label>/<id>/``).
-        index: URL/title lookup from official index CSVs.
         failure_keys: Story keys listed in ``crawl_failures.jsonl`` (skipped).
     """
     if not collected.is_dir():
@@ -245,14 +182,6 @@ def _iter_fnn_rows(
             continue
         if not isinstance(article, dict):
             continue
-        text = (article.get("text") or "").strip()
-        idx = index.get(key, {})
-        title_csv = (idx.get("title") or "").strip()
-        if not text:
-            text = title_csv
-        title_raw = (article.get("title") or title_csv or "").strip()
-        url_json = (article.get("url") or "").strip()
-        news_url = (idx.get("news_url") or "").strip() or url_json
         img = _pick_image_ref(article)
         has_ref = "true" if img else "false"
         lb = "1" if label == "fake" else "0" if label == "real" else ""
@@ -261,18 +190,10 @@ def _iter_fnn_rows(
             "dataset": "fakenewsnet",
             "sample_id": f"fnn:{source}:{label}:{nid}",
             "split_official": "",
-            "split_study": "",
             "label_binary": lb,
             "label_fine": "",
-            "text": text,
-            "title_raw": title_raw,
             "image_ref": img,
             "has_image_ref": has_ref,
-            "image_local_path": "",
-            "image_download_ok": "",
-            "image_preprocessed_path": "",
-            "image_training_ready": "",
-            "article_url": news_url,
             "domain": source,
             "provenance": prov,
         }
@@ -307,12 +228,10 @@ def _run_fakeddit(args: argparse.Namespace) -> int:
 def _run_fakenewsnet(args: argparse.Namespace) -> int:
     """CLI handler: ``fakenewsnet`` subcommand — FNN crawled JSON only."""
     collected = _resolve(PROJECT_ROOT, Path(args.collected))
-    dataset_dir = _resolve(PROJECT_ROOT, Path(args.dataset_dir))
     fl = _resolve(PROJECT_ROOT, Path(args.failure_log)) if args.failure_log else None
     keys = _load_failure_keys(fl)
-    index = _load_fnn_index(dataset_dir)
     out = _resolve(PROJECT_ROOT, Path(args.out))
-    n = _write_tsv(out, _iter_fnn_rows(collected, index, keys))
+    n = _write_tsv(out, _iter_fnn_rows(collected, keys))
     print(
         f"Wrote {n} fakenewsnet rows -> {out} (failure keys skipped: {len(keys)})",
         file=sys.stderr,
@@ -325,15 +244,13 @@ def _run_all(args: argparse.Namespace) -> int:
     input_root = _resolve(PROJECT_ROOT, Path(args.input_root))
     collected = _resolve(PROJECT_ROOT, Path(args.collected))
     failure_log = _resolve(PROJECT_ROOT, Path(args.failure_log)) if args.failure_log else None
-    dataset_dir = _resolve(PROJECT_ROOT, Path(args.dataset_dir))
     out = _resolve(PROJECT_ROOT, Path(args.out))
 
     keys = _load_failure_keys(failure_log)
-    index = _load_fnn_index(dataset_dir)
 
     def merged() -> Iterable[dict[str, str]]:
         yield from _iter_fakeddit_rows(input_root)
-        yield from _iter_fnn_rows(collected, index, keys)
+        yield from _iter_fnn_rows(collected, keys)
 
     n = _write_tsv(out, merged())
     print(f"Wrote {n} total rows -> {out}", file=sys.stderr)
@@ -379,12 +296,6 @@ def main() -> int:
         default=None,
         help="FNN crawl_failures.jsonl — rows for these (source,label,id) are omitted for FNN (default: <collected>/crawl_failures.jsonl if present)",
     )
-    p_all.add_argument(
-        "--dataset-dir",
-        type=Path,
-        default=Path("pipeline/sources/fakenewsnet/dataset"),
-        help="FakeNewsNet index CSVs for URLs/titles (default: pipeline/sources/fakenewsnet/dataset)",
-    )
     p_all.set_defaults(func=_run_all)
 
     p_fd = sub.add_parser("fakeddit", parents=[common_out], help="Fakeddit multimodal TSVs only")
@@ -408,12 +319,6 @@ def main() -> int:
         type=Path,
         default=None,
         help="Omit FNN rows in this log (default: <collected>/crawl_failures.jsonl if present)",
-    )
-    p_fn.add_argument(
-        "--dataset-dir",
-        type=Path,
-        default=Path("pipeline/sources/fakenewsnet/dataset"),
-        help="Index CSVs (default: pipeline/sources/fakenewsnet/dataset)",
     )
     p_fn.set_defaults(func=_run_fakenewsnet)
 

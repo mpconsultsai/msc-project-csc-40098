@@ -217,6 +217,26 @@ def _download_one(
         session.close()
 
 
+def _count_primary_rows(path: Path) -> int:
+    """Count plan rows marked ``plan_role == "primary"`` (the cohort target size).
+
+    Args:
+        path: Cohort plan TSV from step 05.
+
+    Returns:
+        Number of primary rows, i.e. the intended cohort size. ``0`` if the plan
+        has no ``plan_role`` column (older plans), in which case the caller treats
+        the stop target as "whole plan".
+    """
+    n = 0
+    with path.open(encoding="utf-8", newline="") as fp:
+        reader = csv.DictReader(fp, delimiter="\t")
+        for row in reader:
+            if (row.get("plan_role") or "").strip().lower() == "primary":
+                n += 1
+    return n
+
+
 def main() -> int:
     """Fetch cohort plan images and append results to ``cohort_image_fetch.log``.
 
@@ -227,7 +247,8 @@ def main() -> int:
         ``--plan-tsv``: Cohort plan from step 05.
         ``--out-dir`` / ``--log``: Image folder and append-only fetch log.
         ``--limit``: Cap download attempts this run.
-        ``--stop-after-ok``: Stop once total ok rows in log reach N.
+        ``--stop-after-ok``: Stop once total ok rows in log reach N (default: cohort
+            size = plan_role=primary rows; pass 0 for the whole plan).
         ``--force``: Retry rows already logged as fail.
 
     Returns:
@@ -270,7 +291,11 @@ def main() -> int:
         type=int,
         default=None,
         metavar="N",
-        help="Exit once total ok lines in log (existing + this run) reach N; default runs through whole plan",
+        help=(
+            "Exit once total ok lines in log (existing + this run) reach N. "
+            "Default: the cohort size (number of plan_role=primary rows in the plan). "
+            "Pass 0 to fetch the entire plan (primary + reserve)."
+        ),
     )
     ap.add_argument(
         "--force",
@@ -289,6 +314,24 @@ def main() -> int:
         _log(f"Missing plan TSV: {plan_path}")
         return 1
 
+    # Resolve the stop target. Default to the cohort size (primary rows in the
+    # plan) so a normal run stops once the cohort is filled rather than grinding
+    # through every reserve row; ``--stop-after-ok 0`` opts into the whole plan.
+    if args.stop_after_ok is None:
+        stop_after_ok: int | None = _count_primary_rows(plan_path) or None
+        if stop_after_ok is not None:
+            _log(
+                f"--stop-after-ok not set; defaulting to cohort size "
+                f"(plan_role=primary rows) = {stop_after_ok}. Pass --stop-after-ok 0 for the whole plan."
+            )
+        else:
+            _log("--stop-after-ok not set and no primary rows found; fetching the entire plan.")
+    elif args.stop_after_ok <= 0:
+        stop_after_ok = None
+        _log("--stop-after-ok 0: no cap; fetching the entire plan (primary + reserve).")
+    else:
+        stop_after_ok = args.stop_after_ok
+
     reject = _load_sha256_blocklist(block_path)
     header = "ts_utc\tstatus\tdataset\tsample_id\timage_ref\tlocal_path\tdetail\n"
     _ensure_log_header(log_path, header)
@@ -298,11 +341,11 @@ def main() -> int:
         _log(f"Resume: {len(logged_sids)} sample_id(s) already in log (ok or fail; skipped)")
 
     baseline_ok = _count_ok_lines_in_log(log_path)
-    if args.stop_after_ok is not None and baseline_ok >= args.stop_after_ok:
-        _log(f"Already at {baseline_ok} ok line(s) in log (>= --stop-after-ok {args.stop_after_ok}); nothing to do.")
+    if stop_after_ok is not None and baseline_ok >= stop_after_ok:
+        _log(f"Already at {baseline_ok} ok line(s) in log (>= stop-after-ok {stop_after_ok}); nothing to do.")
         return 0
-    if args.stop_after_ok is not None:
-        _log(f"--stop-after-ok {args.stop_after_ok}: starting from {baseline_ok} ok line(s) in log")
+    if stop_after_ok is not None:
+        _log(f"Target: stop after {stop_after_ok} ok image(s); starting from {baseline_ok} already in log.")
 
     processed = 0
     skipped_resume = 0
@@ -343,9 +386,9 @@ def main() -> int:
                     log_path,
                     [ts, "ok", ds, sid, url, str(rel).replace("\\", "/"), ""],
                 )
-                if args.stop_after_ok is not None and baseline_ok + ok_n >= args.stop_after_ok:
+                if stop_after_ok is not None and baseline_ok + ok_n >= stop_after_ok:
                     _log(
-                        f"Stopped: reached --stop-after-ok {args.stop_after_ok} "
+                        f"Stopped: reached stop-after-ok {stop_after_ok} "
                         f"(log now has {baseline_ok + ok_n} ok line(s))."
                     )
                     break

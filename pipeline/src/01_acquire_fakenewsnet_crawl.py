@@ -11,17 +11,16 @@ site changes, Wayback differences). Compare runs by story id, not identical JSON
 Relative ``--out`` and ``--dataset-dir`` paths resolve from the project root (parent of ``pipeline/``).
 
     pip install -r pipeline/requirements.txt
-    python pipeline/src/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --resume
+    python pipeline/src/01_acquire_fakenewsnet_crawl.py --resume
 
-Resume, failure-log skip logic, performance flags, and optional post-crawl consolidation: see
-``pipeline/README.md`` or ``--help``.
+Resume, failure-log skip logic, and performance flags: see ``pipeline/README.md`` or ``--help``.
+Consolidation into ``data/fakenews.tsv`` is a separate step (``04_consolidate_fakenews_tsv.py``).
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -215,9 +214,9 @@ def _process_single_item(
 def main() -> int:
     """Run the FakeNewsNet article crawl from CLI arguments.
 
-    Loads index CSVs, fetches articles via upstream ``crawl_news_article``, writes
-    ``news content.json`` and ``crawl_failures.jsonl``, then optionally invokes
-    ``04_consolidate_fakenews_tsv.py all``.
+    Loads index CSVs, fetches articles via upstream ``crawl_news_article``, and writes
+    ``news content.json`` plus ``crawl_failures.jsonl``. Consolidation into
+    ``data/fakenews.tsv`` is a separate step (``04_consolidate_fakenews_tsv.py``).
 
     Returns:
         ``0`` on success, ``1`` on invalid args or missing upstream clone/dataset paths.
@@ -287,9 +286,9 @@ def main() -> int:
     parser.add_argument(
         "--workers",
         type=int,
-        default=1,
+        default=6,
         metavar="N",
-        help="Parallel fetch threads (default 1). Try 4–8 for speed; may trigger more 429/403.",
+        help="Parallel fetch threads (default 6). Lower to 1–4 if a host returns 429/403; raise for speed.",
     )
     parser.add_argument(
         "--no-wayback",
@@ -300,23 +299,6 @@ def main() -> int:
         "--retry-known-failures",
         action="store_true",
         help="Re-fetch rows listed in the failure log; default is to skip them (faster re-runs).",
-    )
-    parser.add_argument(
-        "--no-consolidate-image-refs",
-        action="store_true",
-        help="Do not regenerate data/fakenews.tsv (combined image-ref TSV) when the run finishes.",
-    )
-    parser.add_argument(
-        "--image-refs-out",
-        type=Path,
-        default=Path("data/fakenews.tsv"),
-        help="Output path for 04_consolidate_fakenews_tsv.py all (project-relative; default data/fakenews.tsv).",
-    )
-    parser.add_argument(
-        "--consolidate-fakeddit-root",
-        type=Path,
-        default=Path("data/processed/fakeddit/v2_text_metadata"),
-        help="Fakeddit root passed to 04_consolidate_fakenews_tsv.py all as --input-root.",
     )
     args = parser.parse_args()
 
@@ -522,38 +504,6 @@ def main() -> int:
         f"skipped_known_failure={total_skipped_known_failure} "
         f"(attempted loop entries={total_attempted}). Failures: {failure_log}"
     )
-
-    if not args.no_consolidate_image_refs:
-        tsv_out = _resolve_project_path(args.image_refs_out, root)
-        fakeddit_root = _resolve_project_path(args.consolidate_fakeddit_root, root)
-        script = root / "pipeline" / "src" / "04_consolidate_fakenews_tsv.py"
-        if not script.is_file():
-            print(
-                "Skipping image-ref consolidation: pipeline/src/04_consolidate_fakenews_tsv.py not found. "
-                "Use --no-consolidate-image-refs to silence this, or add that script.",
-                file=sys.stderr,
-            )
-        else:
-            cmd = [
-                sys.executable,
-                str(script),
-                "all",
-                "--input-root",
-                str(fakeddit_root),
-                "--collected",
-                str(out),
-                "--failure-log",
-                str(failure_log),
-                "--out",
-                str(tsv_out),
-            ]
-            print(f"Combined image-ref TSV: running {' '.join(cmd)}", file=sys.stderr)
-            proc = subprocess.run(cmd, cwd=str(root))
-            if proc.returncode != 0:
-                print(
-                    f"Warning: 04_consolidate_fakenews_tsv.py all exited {proc.returncode}",
-                    file=sys.stderr,
-                )
 
     return 0
 

@@ -79,13 +79,16 @@ flowchart TD
   class S03,S07 optional
 ```
 
-> Step `01` can invoke `04 … all` automatically after a crawl, unless you pass `--no-consolidate-image-refs`.
-
 ## 3. How to run the pipeline
 
 The pipeline has two phases: building the **unified working table** (steps
 01–04), then building the **multimodal cohort and training exports** (steps
 05–12).
+
+> **Runtime:** steps `01` (FNN article crawl) and `06` (cohort image fetch) take the longest time to run — both are network-bound and can each run for **a few hours**
+> (rates depend on your connection, link rot, and host throttling). Both support
+> `--resume` / restart-friendly logs, so they can be stopped and continued. Every
+> other step is a local transform that finishes in seconds to a few minutes.
 
 ### Step 3.1 — Set up the environment
 
@@ -119,12 +122,12 @@ Update the clones at any time with `git -C pipeline/sources/fakenewsnet pull` an
 **FakeNewsNet** — crawl article bodies and image-URL candidates:
 
 ```bash
-python pipeline/src/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --resume
+python pipeline/src/01_acquire_fakenewsnet_crawl.py --resume
 ```
 
 - Output: `data/processed/fakenewsnet/<politifact|gossipcop>/<fake|real>/<id>/news content.json`, plus sidecars `crawl_failures.jsonl` and an optional `_manifest.json`.
 - Use `--resume` to skip existing JSON and `--retry-empty` for files with no body text. Failed rows append to `crawl_failures.jsonl` (`no_article`, `empty_body`, `exception`); the default run skips keys already in that log, and `--retry-known-failures` retries them. Step `03` dedupes the log.
-- **Speed:** the default `--post-download-sleep 0.2` is faster than upstream's 2 s; optional `--workers 6` parallelises fetches (may increase 429/403 responses).
+- **Speed:** the default `--post-download-sleep 0.2` is faster than upstream's 2 s, and fetches run with `--workers 6` by default (lower to 1–4 if a host returns 429/403). After a failed live fetch the crawler falls back to the Internet Archive (Wayback) by default; pass `--no-wayback` to skip it — faster on dead links, at the cost of a few recoveries.
 - **Out of scope:** the Twitter social graph (needs upstream `main.py` plus API keys).
 
 **Fakeddit** — download the v2 text/metadata TSVs:
@@ -162,6 +165,14 @@ python pipeline/src/10_cohort_merge_image_validation_into_fakenews.py
 python pipeline/src/11_cohort_export_final_tsv.py
 python pipeline/src/12_cohort_export_modality_views.py         # training exports
 ```
+
+> Step `06` stops automatically once it has fetched the **cohort size** — the
+> number of `plan_role=primary` rows in the plan (50,000 for the default plan).
+> The extra reserve rows exist to cover download failures, so a normal run fills
+> the cohort and stops rather than fetching all 200,000 plan rows. Pass
+> `--stop-after-ok 0` to fetch the entire plan, or `--stop-after-ok N` for a
+> different target. It is single-threaded with a 45 s per-URL timeout (≈ a few
+> hours for a full cohort); use `--limit N` for a quick test.
 
 > Close `data/fakenews.tsv` in your IDE before running the merge steps `08` and `10` on large files.
 
@@ -235,7 +246,8 @@ checkout, so `data/` starts empty.
 
 ## 6. Unified table schema
 
-`data/fakenews.tsv` has one row per sample. Core columns (see
+`data/fakenews.tsv` has one row per sample. It is a lightweight index table — the
+nine core columns below (see
 [`04_consolidate_fakenews_tsv.py`](src/04_consolidate_fakenews_tsv.py)):
 
 | Column | Meaning |
@@ -243,11 +255,14 @@ checkout, so `data/` starts empty.
 | `dataset` | `fakeddit` \| `fakenewsnet` |
 | `sample_id` | Stable ID, e.g. `fd:{id}` / `fnn:{source}:{label}:{id}` |
 | `split_official` | Fakeddit: from source file; FNN: empty |
+| `domain` | Domain (FNN) / subreddit (Fakeddit) |
 | `label_binary` / `label_fine` | Project labels (Fakeddit `2_way` / `6_way`; FNN from path) |
-| `text` / `title_raw` | Article text (may be sparse until step `12` restores it from provenance for exports) |
 | `image_ref` / `has_image_ref` | Primary image-URL candidate (metadata-level; not proof of download) |
-| `article_url` / `domain` | Source URL and domain/subreddit |
 | `provenance` | Path to the source TSV or JSON (audit trail) |
+
+Article **text**, **title**, and **article URL** are deliberately *not* stored
+here — step `12` reconstructs them from each row's `provenance` file when building
+the text export, which keeps `fakenews.tsv` compact.
 
 **Cohort enrichment** (added by steps `08` / `10`):
 
