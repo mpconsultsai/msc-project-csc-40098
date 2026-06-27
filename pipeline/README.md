@@ -1,20 +1,49 @@
-# Pipeline (`pipeline/`)
+# Pipeline
 
-Numbered Python entrypoints for **FakeNewsNet + Fakeddit → unified table → stratified multimodal cohort → training exports**. Run from the **project root**:
+This directory contains the **data-preparation stage** of the project. It
+acquires the two source corpora (FakeNewsNet and Fakeddit), consolidates them
+into a single unified table, fetches and validates the linked images, and
+exports the gated cohort TSVs used for training.
 
-```bash
-python pipeline/04_consolidate_fakenews_tsv.py all
-```
+**All steps run locally** as numbered Python scripts, executed from the
+**project root**. Paths in command-line arguments resolve from the project root
+unless they are absolute. Generated artefacts are written under `data/` (mostly
+gitignored).
 
-Paths in CLI args resolve from the project root unless absolute. Generated artefacts live under **`data/`** (mostly gitignored). Upstream Git clones live under **`pipeline/fakenewsnet/`** and **`pipeline/fakeddit/`** (nested repos, gitignored).
+The model-training stage that consumes these outputs is described separately in
+[`training/README.md`](../training/README.md). Interactive EDA is optional and
+covered in [`reporting/README.md`](../reporting/README.md)
+([`notebooks/fakenews_preprocessing_eda.ipynb`](../notebooks/fakenews_preprocessing_eda.ipynb)).
 
-**Interactive EDA (optional):** [`notebooks/fakenews_preprocessing_eda.ipynb`](../notebooks/fakenews_preprocessing_eda.ipynb) — see [`reporting/README.md`](../reporting/README.md).
+## Contents
+
+- [What you need before you start](#1-what-you-need-before-you-start)
+- [Pipeline flow](#2-pipeline-flow)
+- [How to run the pipeline](#3-how-to-run-the-pipeline)
+- [Scripts (01–12)](#4-scripts-0112)
+- [Outputs](#5-outputs)
+- [Unified table schema](#6-unified-table-schema)
+- [Sources and limitations](#7-sources-and-limitations)
 
 ---
 
-## Pipeline flow
+## 1. What you need before you start
 
-Solid arrows are the default path. Dashed arrows are **optional QA** steps (run when duplicate log lines or noisy failure logs cause problems).
+| Requirement | Detail |
+|-------------|--------|
+| **Python environment** | A virtual environment built from `requirements.txt` (see [Step 3.1](#step-31--set-up-the-environment)). |
+| **Crawl dependencies** | Step `01` (the FakeNewsNet crawl) also needs `requirements-fakenewsnet-crawl.txt`. |
+| **Upstream repositories** | FakeNewsNet and Fakeddit, cloned under `pipeline/` as nested Git repos (gitignored). See [Step 3.2](#step-32--clone-the-upstream-repositories). |
+| **Disk space** | Room for downloaded images and the upstream clones under `data/` and `pipeline/`. |
+
+> Run every command from the **project root** (e.g. `python pipeline/04_consolidate_fakenews_tsv.py all`). The numbered scripts are entrypoints; the supporting file `pipeline/reddit_placeholder_sha256.txt` (a SHA blocklist referenced by step `06`) is not executed directly.
+
+## 2. Pipeline flow
+
+The diagram below shows the full process: **FakeNewsNet + Fakeddit → unified
+table → stratified multimodal cohort → training exports**. Solid arrows are the
+default path; dashed arrows are **optional QA** steps (run when duplicate log
+lines or noisy failure logs cause problems).
 
 ```mermaid
 flowchart TD
@@ -51,29 +80,110 @@ flowchart TD
   class S03,S07 optional
 ```
 
-**Note:** `01` can invoke `04 … all` after a crawl unless you pass `--no-consolidate-image-refs`.
+> Step `01` can invoke `04 … all` automatically after a crawl, unless you pass `--no-consolidate-image-refs`.
 
----
+## 3. How to run the pipeline
 
-## What to run
+The pipeline has two phases: building the **unified working table** (steps
+01–04), then building the **multimodal cohort and training exports** (steps
+05–12).
+
+### Step 3.1 — Set up the environment
+
+From the project root:
+
+```bash
+cd "/path/to/MSC Project"
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+Step `01` (the FakeNewsNet crawl) needs additional crawl dependencies:
+
+```bash
+pip install -r requirements-fakenewsnet-crawl.txt
+```
+
+### Step 3.2 — Clone the upstream repositories
+
+Both source repos are cloned under `pipeline/` as nested Git repos (ignored by
+the project root).
+
+| Corpus | Remote | Local path |
+|--------|--------|------------|
+| FakeNewsNet | [github.com/KaiDMML/FakeNewsNet](https://github.com/KaiDMML/FakeNewsNet) | `pipeline/fakenewsnet/` — index CSVs in `dataset/`, crawlers in `code/` |
+| Fakeddit | [github.com/entitize/Fakeddit](https://github.com/entitize/Fakeddit) | `pipeline/fakeddit/` — README and helper scripts |
+
+Update the clones at any time with `git -C pipeline/fakenewsnet pull` and
+`git -C pipeline/fakeddit pull`.
+
+### Step 3.3 — Acquire the raw corpora (steps 01–02)
+
+**FakeNewsNet** — crawl article bodies and image-URL candidates:
+
+```bash
+python pipeline/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --resume
+```
+
+- Output: `data/processed/fakenewsnet/<politifact|gossipcop>/<fake|real>/<id>/news content.json`, plus sidecars `crawl_failures.jsonl` and an optional `_manifest.json`.
+- Use `--resume` to skip existing JSON and `--retry-empty` for files with no body text. Failed rows append to `crawl_failures.jsonl` (`no_article`, `empty_body`, `exception`); the default run skips keys already in that log, and `--retry-known-failures` retries them. Step `03` dedupes the log.
+- **Speed:** the default `--post-download-sleep 0.2` is faster than upstream's 2 s; optional `--workers 6` parallelises fetches (may increase 429/403 responses).
+- **Out of scope:** the Twitter social graph (needs upstream `main.py` plus API keys).
+
+**Fakeddit** — download the v2 text/metadata TSVs:
+
+```bash
+python pipeline/02_acquire_fakeddit_metadata.py
+```
+
+- Output: `data/processed/fakeddit/v2_text_metadata/`, with subfolders such as `multimodal_only_samples/` and `all_samples (also includes non multimodal)/`. The official split (`train` / `validate` / `test`) is encoded in each filename.
+- **Not downloaded:** the bulk image archive and the comment TSVs.
+
+### Step 3.4 — Consolidate into the unified table (step 04)
+
+```bash
+python pipeline/04_consolidate_fakenews_tsv.py all   # or: fakeddit | fakenewsnet
+```
+
+This builds `data/fakenews.tsv`. Step `03` (dedupe `crawl_failures.jsonl`) is an
+optional QA step you can run beforehand if the crawl log has duplicate lines.
+
+### Step 3.5 — Build the multimodal cohort and exports (steps 05–12)
+
+After `data/fakenews.tsv` exists:
+
+```bash
+python pipeline/05_cohort_build_plan.py
+python -u pipeline/06_cohort_fetch_images.py --plan-tsv data/processed/cohorts/multimodal_plan_n50000_seed42.tsv
+
+# Optional if the fetch log has duplicate sample_id lines:
+python pipeline/07_qa_cohort_dedupe_fetch_log.py
+
+python pipeline/08_cohort_merge_fetch_log_into_fakenews.py
+python pipeline/09_cohort_image_validation.py              # --resume as needed
+python pipeline/10_cohort_merge_image_validation_into_fakenews.py
+python pipeline/11_cohort_export_final_tsv.py
+python pipeline/12_cohort_export_modality_views.py         # training exports
+```
+
+> Close `data/fakenews.tsv` in your IDE before running the merge steps `08` and `10` on large files.
+
+### Quick reference — what to run for each goal
 
 | Goal | Steps |
-|------|--------|
+|------|-------|
 | **Unified working table** | `04` (`all` \| `fakeddit` \| `fakenewsnet`) — or restore a backed-up `data/fakenews.tsv` |
 | **Raw corpora only** | `01` and/or `02` (then `04` when ready) |
 | **FNN crawl hygiene** | `03` (optional) |
-| **Thesis multimodal cohort → `fake_news_final.tsv`** | `05 → 06 → 08 → 09 → 10 → 11` (+ `07` if fetch log has duplicate `sample_id`s) |
-| **Goal 2 single-modality baselines** | `12` after `11` → `fake_news_final_text.tsv` + `fake_news_final_image.tsv` |
-| **Training scripts / Gradio demo** | Uses the step **12** outputs (see [`training/README.md`](../training/README.md)) |
+| **Multimodal cohort → `fake_news_final.tsv`** | `05 → 06 → 08 → 09 → 10 → 11` (+ `07` if the fetch log has duplicate `sample_id`s) |
+| **Single-modality training exports** | `12` after `11` → `fake_news_final_text.tsv` + `fake_news_final_image.tsv` |
+| **Training / demo UI** | Uses the step `12` outputs (see [`training/README.md`](../training/README.md)) |
 
-**Supporting data file:** `pipeline/reddit_placeholder_sha256.txt` (SHA blocklist referenced by `06`, not executed).
-
----
-
-## Scripts (01–12)
+## 4. Scripts (01–12)
 
 | # | Script | Stage |
-|---|--------|--------|
+|---|--------|-------|
 | 01 | `01_acquire_fakenewsnet_crawl.py` | Acquire — crawl FNN articles → `data/processed/fakenewsnet/` |
 | 02 | `02_acquire_fakeddit_metadata.py` | Acquire — Fakeddit v2 TSVs from Google Drive |
 | 03 | `03_qa_fnn_dedupe_crawl_failures.py` | **Optional QA** — dedupe `crawl_failures.jsonl` |
@@ -87,33 +197,9 @@ flowchart TD
 | 11 | `11_cohort_export_final_tsv.py` | Cohort — export gated `fake_news_final.tsv` (default score ≥ 75) |
 | 12 | `12_cohort_export_modality_views.py` | Cohort — split into text-only and image-only training TSVs |
 
-Each script: `python pipeline/<script>.py --help` for flags.
+Run `python pipeline/<script>.py --help` for the full set of flags on any script.
 
----
-
-## Reproducible cohort order
-
-After `data/fakenews.tsv` exists:
-
-```bash
-python pipeline/05_cohort_build_plan.py
-python -u pipeline/06_cohort_fetch_images.py --plan-tsv data/processed/cohorts/multimodal_plan_n50000_seed42.tsv
-
-# Optional if the log has duplicate sample_id lines:
-python pipeline/07_qa_cohort_dedupe_fetch_log.py
-
-python pipeline/08_cohort_merge_fetch_log_into_fakenews.py
-python pipeline/09_cohort_image_validation.py              # --resume as needed
-python pipeline/10_cohort_merge_image_validation_into_fakenews.py
-python pipeline/11_cohort_export_final_tsv.py
-python pipeline/12_cohort_export_modality_views.py         # Goal 2 baselines
-```
-
-Close `data/fakenews.tsv` in the IDE before merge steps **08** and **10** on large files.
-
----
-
-## Outputs map
+## 5. Outputs
 
 | Path | Produced by |
 |------|-------------|
@@ -128,51 +214,28 @@ Close `data/fakenews.tsv` in the IDE before merge steps **08** and **10** on lar
 | `data/processed/cohorts/image_validation/cohort_image_validation.tsv` | `09` |
 | `data/processed/cohorts/image_validation/cohort_image_validation_summary.log` | `09` |
 
-**Dependencies:** `requirements.txt` (general); `requirements-fakenewsnet-crawl.txt` (step `01`).
+**`data/` layout:**
 
----
-
-## Clone locations and acquire commands
-
-Official repos are cloned under **`pipeline/`** as nested Git repos (ignored by the MSc project root).
-
-### FakeNewsNet
-
-- **Remote:** [github.com/KaiDMML/FakeNewsNet](https://github.com/KaiDMML/FakeNewsNet)
-- **Local:** `pipeline/fakenewsnet/` — index CSVs in `dataset/`, crawlers in `code/`
-- **Crawl output:** `data/processed/fakenewsnet/<politifact|gossipcop>/<fake|real>/<id>/news content.json`
-- **Sidecars:** `crawl_failures.jsonl`, optional `_manifest.json`
-
-```bash
-pip install -r requirements-fakenewsnet-crawl.txt
-python pipeline/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --resume
+```
+data/
+├── fakenews.tsv                 # working unified table
+├── fake_news_final.tsv          # gated cohort (step 11)
+├── fake_news_final_text.tsv     # text export (step 12)
+├── fake_news_final_image.tsv    # image export (step 12)
+└── processed/
+    ├── fakenewsnet/             # FNN crawl tree + crawl_failures.jsonl
+    ├── fakeddit/v2_text_metadata/
+    ├── cohorts/                 # plan TSV, image_validation/
+    └── images/                  # downloaded files + cohort_image_fetch.log
 ```
 
-Use **`--resume`** to skip existing JSON; **`--retry-empty`** for files with no body text. Failed rows append to **`crawl_failures.jsonl`** (`no_article`, `empty_body`, `exception`). Default skips keys already in the failure log; use **`--retry-known-failures`** to retry. **`03`** dedupes that log.
+Large upstream clones and generated outputs stay **gitignored** in a fresh
+checkout, so `data/` starts empty.
 
-**Speed:** default `--post-download-sleep 0.2` (faster than upstream 2 s). Optional `--workers 6` for parallel fetches (may increase 429/403).
+## 6. Unified table schema
 
-Update clone: `git -C pipeline/fakenewsnet pull`
-
-**Out of scope:** Twitter social graph (needs upstream `main.py` + API keys).
-
-### Fakeddit
-
-- **Remote:** [github.com/entitize/Fakeddit](https://github.com/entitize/Fakeddit)
-- **Local:** `pipeline/fakeddit/` — README and helper scripts
-- **Download:** `python pipeline/02_acquire_fakeddit_metadata.py` → **`data/processed/fakeddit/v2_text_metadata/`**
-
-Typical subfolders: `multimodal_only_samples/` (`multimodal_train.tsv`, …) and `all_samples (also includes non multimodal)/`. Official split is encoded by **filename** (`train` / `validate` / `test`).
-
-Update clone: `git -C pipeline/fakeddit pull`
-
-**Not downloaded:** bulk image archive; comment TSVs.
-
----
-
-## Unified table schema (`data/fakenews.tsv`)
-
-One row per sample. Core columns (see [`04_consolidate_fakenews_tsv.py`](04_consolidate_fakenews_tsv.py)):
+`data/fakenews.tsv` has one row per sample. Core columns (see
+[`04_consolidate_fakenews_tsv.py`](04_consolidate_fakenews_tsv.py)):
 
 | Column | Meaning |
 |--------|---------|
@@ -180,12 +243,12 @@ One row per sample. Core columns (see [`04_consolidate_fakenews_tsv.py`](04_cons
 | `sample_id` | Stable ID, e.g. `fd:{id}` / `fnn:{source}:{label}:{id}` |
 | `split_official` | Fakeddit: from source file; FNN: empty |
 | `label_binary` / `label_fine` | Project labels (Fakeddit `2_way` / `6_way`; FNN from path) |
-| `text` / `title_raw` | Article text (may be sparse until step **12** restores from provenance for exports) |
-| `image_ref` / `has_image_ref` | Primary image URL candidate (metadata-level; not proof of download) |
+| `text` / `title_raw` | Article text (may be sparse until step `12` restores it from provenance for exports) |
+| `image_ref` / `has_image_ref` | Primary image-URL candidate (metadata-level; not proof of download) |
 | `article_url` / `domain` | Source URL and domain/subreddit |
-| `provenance` | Path to source TSV or JSON (audit trail) |
+| `provenance` | Path to the source TSV or JSON (audit trail) |
 
-**Cohort enrichment** (added by steps **08** / **10**):
+**Cohort enrichment** (added by steps `08` / `10`):
 
 | Column group | Added by |
 |--------------|----------|
@@ -194,38 +257,20 @@ One row per sample. Core columns (see [`04_consolidate_fakenews_tsv.py`](04_cons
 
 **Final exports:**
 
-- **`fake_news_final.tsv`** — rows with `image_option1_validity_score` ≥ threshold (default 75)
-- **`fake_news_final_text.tsv`** — same cohort, text columns restored from provenance
-- **`fake_news_final_image.tsv`** — subset with fetch OK + training-eligible + local path
+- **`fake_news_final.tsv`** — rows with `image_option1_validity_score` ≥ threshold (default 75).
+- **`fake_news_final_text.tsv`** — the same cohort, with text columns restored from provenance.
+- **`fake_news_final_image.tsv`** — the subset with fetch OK + training-eligible + a local path.
 
----
-
-## Sources and limitations
+## 7. Sources and limitations
 
 | Corpus | Role | Limitations |
 |--------|------|-------------|
 | **FakeNewsNet** | News articles (PolitiFact + GossipCop); bodies via local crawl | Link rot, bot blocking, empty pages; ~23k index rows, crawl success varies |
 | **Fakeddit** | Reddit multimodal benchmark (title + `image_url`); official splits in filenames | `image_url` is metadata until downloaded and validated |
 
-**Citations:** FakeNewsNet — papers in `pipeline/fakenewsnet/README.md`; Fakeddit — Nakamura et al. (see `pipeline/fakeddit/README.md`).
+**Citations:** FakeNewsNet — papers in `pipeline/fakenewsnet/README.md`; Fakeddit
+— Nakamura et al. (see `pipeline/fakeddit/README.md`).
 
-**Evaluation note:** Fakeddit benchmark-style evaluation uses `split_official` and the public test file. Joint cross-dataset splits need a documented `split_study` rule and are not the same protocol unless reported separately.
-
----
-
-## `data/` layout
-
-```
-data/
-├── fakenews.tsv                 # working unified table
-├── fake_news_final.tsv          # gated cohort (step 11)
-├── fake_news_final_text.tsv     # text baseline (step 12)
-├── fake_news_final_image.tsv    # image baseline (step 12)
-└── processed/
-    ├── fakenewsnet/             # FNN crawl tree + crawl_failures.jsonl
-    ├── fakeddit/v2_text_metadata/
-    ├── cohorts/                 # plan TSV, image_validation/
-    └── images/                  # downloaded files + cohort_image_fetch.log
-```
-
-Large upstream clones and generated outputs stay **gitignored** in a fresh checkout.
+**Evaluation note:** Fakeddit benchmark-style evaluation uses `split_official`
+and the public test file. Joint cross-dataset splits need a documented
+`split_study` rule and are not the same protocol unless reported separately.
