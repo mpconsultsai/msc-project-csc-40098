@@ -12,7 +12,9 @@ from __future__ import annotations
 from pathlib import Path
 
 #: Files/folders that uniquely identify the repository root in a fresh checkout.
-ROOT_MARKERS: tuple[str, ...] = (".git", "pyrightconfig.json", "requirements.txt")
+#: ``requirements.txt`` is intentionally excluded — each stage (``pipeline/``,
+#: ``training/``, ``ui/``) now ships its own, so it no longer marks the root.
+ROOT_MARKERS: tuple[str, ...] = (".git", "pyrightconfig.json")
 
 
 def find_project_root(start: Path | None = None) -> Path:

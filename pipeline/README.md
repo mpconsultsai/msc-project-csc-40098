@@ -31,8 +31,7 @@ over the generated artefacts lives in
 
 | Requirement | Detail |
 |-------------|--------|
-| **Python environment** | A virtual environment built from `requirements.txt` (see [Step 3.1](#step-31--set-up-the-environment)). |
-| **Crawl dependencies** | Step `01` (the FakeNewsNet crawl) also needs `requirements-fakenewsnet-crawl.txt`. |
+| **Python environment** | A virtual environment built from `pipeline/requirements.txt`, which already includes the FakeNewsNet crawl dependencies used by step `01` (see [Step 3.1](#step-31--set-up-the-environment)). |
 | **Upstream repositories** | FakeNewsNet and Fakeddit, cloned under `pipeline/sources/` as nested Git repos (gitignored). See [Step 3.2](#step-32--clone-the-upstream-repositories). |
 | **Disk space** | Room for downloaded images and the upstream clones under `data/` and `pipeline/`. |
 
@@ -96,14 +95,11 @@ From the project root:
 cd "/path/to/MSC Project"
 python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r pipeline/requirements.txt
 ```
 
-Step `01` (the FakeNewsNet crawl) needs additional crawl dependencies:
-
-```bash
-pip install -r requirements-fakenewsnet-crawl.txt
-```
+`pipeline/requirements.txt` already includes the extra dependencies the step `01`
+crawl needs (newspaper3k, lxml, etc.), so no separate install is required.
 
 ### Step 3.2 — Clone the upstream repositories
 

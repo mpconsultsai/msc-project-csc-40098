@@ -10,7 +10,7 @@ site changes, Wayback differences). Compare runs by story id, not identical JSON
 
 Relative ``--out`` and ``--dataset-dir`` paths resolve from the project root (parent of ``pipeline/``).
 
-    pip install -r requirements-fakenewsnet-crawl.txt
+    pip install -r pipeline/requirements.txt
     python pipeline/src/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --resume
 
 Resume, failure-log skip logic, performance flags, and optional post-crawl consolidation: see

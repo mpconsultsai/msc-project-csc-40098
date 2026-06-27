@@ -171,18 +171,23 @@ helper modules in `training/src/`. The tables below list them by name.
 
 | File | Purpose |
 |------|---------|
-| `requirements.txt` | Pinned dependency reference. The notebooks install these in Colab with `!pip install`; the file documents the exact versions. |
 | `pyrightconfig.json`, `typings/` | Editor type-checking support only (e.g. a stub for `google.colab`). They have no effect on training. |
+
+There is **no `requirements.txt` for training** — each notebook installs its own
+dependencies inline with `!pip install` in its setup cell, so the runtime
+environment is fully defined by the notebook itself.
 
 > **Optional — local editor environment.** Training does not need anything
 > installed locally. If you want type-checking and autocompletion while editing
-> the `.py` modules in your IDE, create a virtual environment from
-> `requirements.txt` (the notebooks themselves still run in Colab):
+> the `.py` modules in your IDE, create a virtual environment and install the
+> same libraries the notebooks list in their `!pip install` setup cells (the
+> notebooks themselves still run in Colab):
 >
 > ```bash
 > python3 -m venv .venv
 > source .venv/bin/activate        # Windows: .venv\Scripts\activate
-> pip install -r training/requirements.txt
+> pip install torch torchvision transformers datasets accelerate \
+>     scikit-learn pandas pillow matplotlib tqdm
 > ```
 
 ## 4. Outputs

@@ -15,14 +15,18 @@ models, and a proof-of-concept demo UI.
 
 ## Python environment
 
-The pipeline and demo UI run locally from a virtual environment built at the
-project root; model training runs in Colab (see [`training/README.md`](training/README.md)).
+The **pipeline** and **demo UI** run locally; **model training runs in Colab**
+(see [`training/README.md`](training/README.md)). Each stage has its own
+self-contained `requirements.txt`, so create a virtual environment and install
+the file for whichever stage you are working on:
 
 ```bash
 cd "/path/to/MSC Project"
 python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+
+pip install -r pipeline/requirements.txt   # data preparation
+pip install -r ui/requirements.txt         # demo UI
 ```
 
 In the IDE, point the Python interpreter at `.venv/bin/python` (macOS/Linux) or
@@ -30,10 +34,11 @@ In the IDE, point the Python interpreter at `.venv/bin/python` (macOS/Linux) or
 
 | Requirements file | Used for |
 |-------------------|----------|
-| `requirements.txt` | Shared / pipeline dependencies. |
-| `requirements-fakenewsnet-crawl.txt` | The FakeNewsNet crawl (pipeline step `01`). |
+| `pipeline/requirements.txt` | Data-preparation scripts and the EDA notebook (incl. the FakeNewsNet crawl, step `01`). |
 | `ui/requirements.txt` | The Gradio demo UI. |
-| `training/requirements.txt` | Pinned reference for the Colab notebooks (optional local editor env). |
+
+Training has no requirements file — each Colab notebook installs its own
+dependencies inline with `!pip install` (see [`training/README.md`](training/README.md)).
 
 ## Upstream repositories
 
