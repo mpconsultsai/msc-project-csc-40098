@@ -16,7 +16,6 @@ Copy ``runs/`` from Colab to the project root before using all models.
 Deploy:
   Local:     .venv/bin/python ui/gradio-ui.py
   Public:    .venv/bin/python ui/gradio-ui.py --share
-  LAN:       .venv/bin/python ui/gradio-ui.py --host 0.0.0.0 --port 7860
   HF Space:  see ui/README.md
 """
 
@@ -26,17 +25,18 @@ import argparse
 import csv
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
+import gradio as gr
+
+# ``inference`` lives alongside this file; add ui/ to sys.path before importing it.
 _UI_DIR = Path(__file__).resolve().parent
 if str(_UI_DIR) not in sys.path:
     sys.path.insert(0, str(_UI_DIR))
 
-import gradio as gr
-
-from inference import TFIDF_PIPELINE_NAME, get_engine
-
+from inference import TFIDF_PIPELINE_NAME, get_engine  # noqa: E402
 # --- Model catalogue (matches training run folders) ---
 
 MODEL_CATALOG: dict[str, dict[str, str]] = {
@@ -95,7 +95,14 @@ MODEL_ORDER: list[str] = [
 
 
 def model_dropdown_label(model_key: str) -> str:
-    """Compact label for the dropdown (paradigm + architecture family)."""
+    """Build the compact dropdown label for a model.
+
+    Args:
+        model_key: A key in :data:`MODEL_CATALOG`.
+
+    Returns:
+        A ``"modality · paradigm · name"`` label for the dropdown.
+    """
     c = MODEL_CATALOG[model_key]
     return f"{c['modality']} · {c['paradigm']} · {c['name']}"
 
@@ -119,6 +126,16 @@ RUN_DIRS: dict[str, str] = {
     "fusion_attention": "fusion_attention",
 }
 
+# Per-model predicate checking that the required checkpoint exists in its run dir.
+ARTEFACT_CHECKS: dict[str, Callable[[Path], bool]] = {
+    "text_tfidf": lambda run: (run / TFIDF_PIPELINE_NAME).is_file(),
+    "text_distilbert": lambda run: (run / "model" / "config.json").is_file(),
+    "image_resnet18": lambda run: any(run.glob("resnet18*.pt")),
+    "fusion_late": lambda run: (run / "late_fusion_combiner.pkl").is_file(),
+    "fusion_early": lambda run: (run / "early_fusion_head.pt").is_file(),
+    "fusion_attention": lambda run: (run / "attention_fusion_head.pt").is_file(),
+}
+
 TEXT_TSV = "data/fake_news_final_text.tsv"
 IMAGE_TSV = "data/fake_news_final_image.tsv"
 
@@ -138,7 +155,16 @@ def load_cohort_example(
     root: Path,
     sample_id: str,
 ) -> tuple[str, str | None]:
-    """Load post text and local image path for one cohort row."""
+    """Load the post text and local image path for one frozen cohort row.
+
+    Args:
+        root: Repository root containing the cohort TSVs and images.
+        sample_id: The ``sample_id`` to look up in both cohort exports.
+
+    Returns:
+        A ``(text, image_path)`` pair. ``text`` is empty and ``image_path`` is
+        ``None`` if the TSVs or the image file are missing.
+    """
     text_tsv = root / TEXT_TSV
     image_tsv = root / IMAGE_TSV
     if not text_tsv.is_file() or not image_tsv.is_file():
@@ -168,7 +194,15 @@ def load_cohort_example(
 
 
 def load_demo_examples(root: Path) -> dict[str, tuple[str, str | None]]:
-    """Preload real and fake cohort posts (content only)."""
+    """Preload the real and fake demo posts (content only; labels are not shown).
+
+    Args:
+        root: Repository root containing the cohort TSVs and images.
+
+    Returns:
+        A dict keyed by ``"real"`` / ``"fake"``, each mapping to a
+        ``(text, image_path)`` pair.
+    """
     return {
         "real": load_cohort_example(root, EXAMPLE_REAL_ID),
         "fake": load_cohort_example(root, EXAMPLE_FAKE_ID),
@@ -179,11 +213,20 @@ def apply_demo_example(
     kind: str,
     examples: dict[str, tuple[str, str | None]],
 ) -> tuple[str, str | None]:
-    """Return text and image path for the chosen cohort example."""
+    """Return the text and image path for the chosen demo example.
+
+    Args:
+        kind: ``"real"`` or ``"fake"``.
+        examples: The preloaded examples from :func:`load_demo_examples`.
+
+    Returns:
+        The ``(text, image_path)`` pair, or ``("", None)`` if ``kind`` is unknown.
+    """
     return examples.get(kind, ("", None))
 
 
 def clear_text_input() -> str:
+    """Return an empty string to clear the text input."""
     return ""
 
 
@@ -193,32 +236,30 @@ DISCLAIMER = (
 
 
 def project_root() -> Path:
-    """Repository root (parent of ui/)."""
+    """Return the repository root (the parent of ``ui/``)."""
     return Path(__file__).resolve().parent.parent
 
 
 def runs_dir() -> Path:
+    """Return the ``runs/`` directory at the project root."""
     return project_root() / "runs"
 
 
 def artefacts_present(model_key: str) -> bool:
-    run_id = RUN_DIRS[model_key]
-    run_path = runs_dir() / run_id
+    """Check whether the trained artefacts for a model exist under ``runs/``.
+
+    Args:
+        model_key: A key in :data:`MODEL_CATALOG`.
+
+    Returns:
+        ``True`` if the run directory and the model-specific checkpoint file(s)
+        are present, otherwise ``False``.
+    """
+    run_path = runs_dir() / RUN_DIRS[model_key]
     if not run_path.is_dir():
         return False
-    if model_key == "text_distilbert":
-        return (run_path / "model" / "config.json").is_file()
-    if model_key == "text_tfidf":
-        return (run_path / TFIDF_PIPELINE_NAME).is_file()
-    if model_key == "image_resnet18":
-        return any(run_path.glob("resnet18*.pt"))
-    if model_key == "fusion_late":
-        return (run_path / "late_fusion_combiner.pkl").is_file()
-    if model_key == "fusion_early":
-        return (run_path / "early_fusion_head.pt").is_file()
-    if model_key == "fusion_attention":
-        return (run_path / "attention_fusion_head.pt").is_file()
-    return (run_path / "metrics.json").is_file()
+    check = ARTEFACT_CHECKS.get(model_key, lambda run: (run / "metrics.json").is_file())
+    return check(run_path)
 
 
 def validate_inputs(
@@ -226,7 +267,17 @@ def validate_inputs(
     image: Any,
     model_key: str,
 ) -> str | None:
-    """Return an error message, or None if inputs are acceptable."""
+    """Validate the inputs required by the selected model.
+
+    Args:
+        text: Raw post text (may be ``None``).
+        image: The uploaded image, or ``None`` if none was provided.
+        model_key: A key in :data:`MODEL_CATALOG`.
+
+    Returns:
+        A user-facing error message if a required input is missing, otherwise
+        ``None``.
+    """
     text_clean = (text or "").strip()
     has_image = image is not None
 
@@ -243,7 +294,15 @@ def validate_inputs(
 
 
 def model_info_markdown(model_key: str) -> str:
-    """Helper text under the model selector."""
+    """Render the descriptive helper text shown under the model selector.
+
+    Args:
+        model_key: A key in :data:`MODEL_CATALOG`.
+
+    Returns:
+        A Markdown blurb (modality, paradigm, architecture, inputs), or an empty
+        string if ``model_key`` is unknown.
+    """
     c = MODEL_CATALOG.get(model_key, {})
     if not c:
         return ""
@@ -255,6 +314,15 @@ def model_info_markdown(model_key: str) -> str:
 
 
 def model_display_name(model_key: str) -> str:
+    """Return the human-readable model name used in the verdict text.
+
+    Args:
+        model_key: A key in :data:`MODEL_CATALOG`.
+
+    Returns:
+        A ``"modality — name (paradigm)"`` string, or ``model_key`` itself if
+        the key is unknown.
+    """
     c = MODEL_CATALOG.get(model_key, {})
     if not c:
         return model_key
@@ -263,8 +331,16 @@ def model_display_name(model_key: str) -> str:
 
 def input_visibility_for_model(
     model_key: str,
-):
-    """Show text and/or image inputs depending on the selected model."""
+) -> tuple[dict, dict, dict]:
+    """Compute the visibility of the text and image inputs for a model.
+
+    Args:
+        model_key: A key in :data:`MODEL_CATALOG`.
+
+    Returns:
+        Three Gradio update objects for ``(text input, clear-text button,
+        image input)`` toggling visibility to match the model's modality.
+    """
     show_text = model_key in TEXT_ONLY or model_key in FUSION
     show_image = model_key in IMAGE_ONLY or model_key in FUSION
     return (
@@ -275,6 +351,16 @@ def input_visibility_for_model(
 
 
 def format_verdict(label: str, score_fake: float, model_label: str) -> str:
+    """Format the prediction as the Markdown verdict shown in the UI.
+
+    Args:
+        label: The predicted label (e.g. ``"Likely fake"``).
+        score_fake: ``P(fake)`` in ``[0, 1]``.
+        model_label: The display name of the model used.
+
+    Returns:
+        A Markdown string with the estimate, score, model, and disclaimer.
+    """
     return (
         f"### Estimate: **{label}**\n\n"
         f"- **P(fake):** {score_fake:.3f}\n"
@@ -288,7 +374,16 @@ def run_inference(
     image: Any,
     model_key: str,
 ) -> dict[str, Any]:
-    """Delegate to lazy-loaded checkpoints under runs/."""
+    """Run inference by delegating to the lazy-loaded engine in ``inference.py``.
+
+    Args:
+        text: Raw post text (may be ``None``).
+        image: The uploaded PIL image, or ``None``.
+        model_key: A key in :data:`MODEL_CATALOG`.
+
+    Returns:
+        The engine's result dict (``label``, ``score_fake``, and any extras).
+    """
     return get_engine(project_root()).predict(text, image, model_key)
 
 
@@ -297,7 +392,18 @@ def analyse(
     image: Any,
     model_key: str,
 ) -> tuple[str, dict[str, Any]]:
-    """Gradio handler: validate, predict, return markdown + detail dict."""
+    """Validate inputs, run inference, and format the result for the UI.
+
+    Args:
+        text: Raw post text (may be ``None``).
+        image: The uploaded PIL image, or ``None``.
+        model_key: A key in :data:`MODEL_CATALOG`.
+
+    Returns:
+        A ``(markdown, detail)`` pair: the Markdown to display, and a detail dict
+        with the raw result plus ``model`` and ``latency_ms`` (or an ``error``
+        key when validation fails, artefacts are missing, or inference raises).
+    """
     model_label = model_display_name(model_key)
 
     err = validate_inputs(text, image, model_key)
@@ -339,96 +445,173 @@ def analyse_for_ui(
     image: Any,
     model_key: str,
 ) -> str:
-    """Gradio handler: verdict only (no raw detail JSON in the UI)."""
+    """Gradio click handler returning only the verdict Markdown.
+
+    Wraps :func:`analyse` and discards the detail dict, since the UI shows the
+    formatted verdict rather than the raw JSON.
+
+    Args:
+        text: Raw post text (may be ``None``).
+        image: The uploaded PIL image, or ``None``.
+        model_key: A key in :data:`MODEL_CATALOG`.
+
+    Returns:
+        The Markdown verdict string.
+    """
     verdict, _detail = analyse(text, image, model_key)
     return verdict
 
 
+@dataclass
+class DemoComponents:
+    """References to the interactive components, shared between builders and wiring."""
+
+    model_in: gr.Dropdown
+    model_info: gr.Markdown
+    text_in: gr.Textbox
+    clear_text_btn: gr.Button
+    image_in: gr.Image
+    load_real_btn: gr.Button
+    load_fake_btn: gr.Button
+    analyse_btn: gr.Button
+    verdict_out: gr.Markdown
+
+
+def _build_header() -> None:
+    """Render the title and scope-notice Markdown (no interactive components)."""
+    gr.Markdown(
+        "# Multimodal Fake News Detection on Social Media\n"
+        "Choose a **model** first — only the inputs that model needs are shown."
+    )
+    gr.Markdown(SCOPE_NOTICE)
+
+
+def _build_model_selector() -> tuple[gr.Dropdown, gr.Markdown]:
+    """Build the model dropdown and its descriptive helper text.
+
+    Returns:
+        The ``(model dropdown, model info markdown)`` components.
+    """
+    model_in = gr.Dropdown(label="Model", choices=MODEL_CHOICES, value=DEFAULT_MODEL)
+    model_info = gr.Markdown(value=model_info_markdown(DEFAULT_MODEL))
+    return model_in, model_info
+
+
+def _build_inputs() -> tuple[gr.Textbox, gr.Button, gr.Image]:
+    """Build the text and image input row.
+
+    Returns:
+        The ``(text input, clear-text button, image input)`` components.
+    """
+    with gr.Row():
+        with gr.Column(scale=1):
+            text_in = gr.Textbox(
+                label="Post text",
+                placeholder="News-related headline or social post…",
+                lines=4,
+                visible=True,
+            )
+            clear_text_btn = gr.Button("Clear text", size="sm", visible=True)
+        image_in = gr.Image(
+            label="Image",
+            type="pil",
+            sources=["upload", "clipboard"],
+            visible=True,
+        )
+    return text_in, clear_text_btn, image_in
+
+
+def _build_actions() -> tuple[gr.Button, gr.Button, gr.Button, gr.Markdown]:
+    """Build the example-loader buttons, the analyse button, and the result area.
+
+    Returns:
+        The ``(load-real button, load-fake button, analyse button, verdict
+        markdown)`` components.
+    """
+    with gr.Row():
+        load_real_btn = gr.Button("Load real example", size="sm")
+        load_fake_btn = gr.Button("Load fake example", size="sm")
+    analyse_btn = gr.Button("Analyse", variant="primary")
+    verdict_out = gr.Markdown(label="Result")
+    return load_real_btn, load_fake_btn, analyse_btn, verdict_out
+
+
+def _wire_events(
+    c: DemoComponents,
+    demo: gr.Blocks,
+    demo_examples: dict[str, tuple[str, str | None]],
+) -> None:
+    """Connect component events to their handler functions.
+
+    Args:
+        c: The demo's component references.
+        demo: The enclosing Blocks app (for the initial ``load`` event).
+        demo_examples: Preloaded example content for the loader buttons.
+    """
+    # Refresh the model info and input visibility both on change and on first load.
+    for trigger in (c.model_in.change, demo.load):
+        trigger(fn=model_info_markdown, inputs=[c.model_in], outputs=[c.model_info])
+        trigger(
+            fn=input_visibility_for_model,
+            inputs=[c.model_in],
+            outputs=[c.text_in, c.clear_text_btn, c.image_in],
+        )
+
+    c.load_real_btn.click(
+        fn=lambda: apply_demo_example("real", demo_examples),
+        outputs=[c.text_in, c.image_in],
+    )
+    c.load_fake_btn.click(
+        fn=lambda: apply_demo_example("fake", demo_examples),
+        outputs=[c.text_in, c.image_in],
+    )
+    c.clear_text_btn.click(fn=clear_text_input, outputs=[c.text_in])
+    c.analyse_btn.click(
+        fn=analyse_for_ui,
+        inputs=[c.text_in, c.image_in, c.model_in],
+        outputs=[c.verdict_out],
+    )
+
+
 def build_demo() -> gr.Blocks:
+    """Assemble the Gradio Blocks app from the section builders and wire its events.
+
+    Returns:
+        The assembled :class:`gradio.Blocks` demo, ready to ``launch()``.
+    """
     demo_examples = load_demo_examples(project_root())
 
     with gr.Blocks(
         title="Multimodal Fake News Detection on Social Media",
         theme=gr.themes.Origin(),
     ) as demo:
-        gr.Markdown(
-            "# Multimodal Fake News Detection on Social Media\n"
-            "Choose a **model** first — only the inputs that model needs are shown."
-        )
-        gr.Markdown(SCOPE_NOTICE)
+        _build_header()
+        model_in, model_info = _build_model_selector()
+        text_in, clear_text_btn, image_in = _build_inputs()
+        load_real_btn, load_fake_btn, analyse_btn, verdict_out = _build_actions()
 
-        model_in = gr.Dropdown(
-            label="Model",
-            choices=MODEL_CHOICES,
-            value=DEFAULT_MODEL,
+        components = DemoComponents(
+            model_in=model_in,
+            model_info=model_info,
+            text_in=text_in,
+            clear_text_btn=clear_text_btn,
+            image_in=image_in,
+            load_real_btn=load_real_btn,
+            load_fake_btn=load_fake_btn,
+            analyse_btn=analyse_btn,
+            verdict_out=verdict_out,
         )
-        model_info = gr.Markdown(value=model_info_markdown(DEFAULT_MODEL))
-
-        with gr.Row():
-            with gr.Column(scale=1):
-                text_in = gr.Textbox(
-                    label="Post text",
-                    placeholder="News-related headline or social post…",
-                    lines=4,
-                    visible=True,
-                )
-                clear_text_btn = gr.Button("Clear text", size="sm", visible=True)
-            image_in = gr.Image(
-                label="Image",
-                type="pil",
-                sources=["upload", "clipboard"],
-                visible=True,
-            )
-
-        with gr.Row():
-            load_real_btn = gr.Button("Load real example", size="sm")
-            load_fake_btn = gr.Button("Load fake example", size="sm")
-
-        analyse_btn = gr.Button("Analyse", variant="primary")
-
-        verdict_out = gr.Markdown(label="Result")
-
-        model_in.change(
-            fn=model_info_markdown,
-            inputs=[model_in],
-            outputs=[model_info],
-        )
-        model_in.change(
-            fn=input_visibility_for_model,
-            inputs=[model_in],
-            outputs=[text_in, clear_text_btn, image_in],
-        )
-        demo.load(
-            fn=model_info_markdown,
-            inputs=[model_in],
-            outputs=[model_info],
-        )
-        demo.load(
-            fn=input_visibility_for_model,
-            inputs=[model_in],
-            outputs=[text_in, clear_text_btn, image_in],
-        )
-
-        load_real_btn.click(
-            fn=lambda: apply_demo_example("real", demo_examples),
-            outputs=[text_in, image_in],
-        )
-        load_fake_btn.click(
-            fn=lambda: apply_demo_example("fake", demo_examples),
-            outputs=[text_in, image_in],
-        )
-        clear_text_btn.click(fn=clear_text_input, outputs=[text_in])
-
-        analyse_btn.click(
-            fn=analyse_for_ui,
-            inputs=[text_in, image_in, model_in],
-            outputs=[verdict_out],
-        )
+        _wire_events(components, demo, demo_examples)
 
     return demo
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse the command-line arguments for launching the app.
+
+    Returns:
+        The parsed namespace with ``share``, ``host``, and ``port``.
+    """
     parser = argparse.ArgumentParser(description="Multimodal fake news Gradio PoC")
     parser.add_argument(
         "--share",

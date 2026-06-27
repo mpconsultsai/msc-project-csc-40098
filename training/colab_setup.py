@@ -46,6 +46,17 @@ MIN_JPG_COUNT = 1000
 
 @dataclass
 class ColabSetup:
+    """Resolved paths and counts returned by :func:`setup_colab_project`.
+
+    Attributes:
+        project_root: Root the project was set up under (``/content/msc``).
+        data_dir: The ``data/`` directory holding the copied TSVs.
+        training_dir: The ``training/`` directory with the synced helper modules.
+        images_dir: The directory holding the unzipped/linked images.
+        image_count: Number of ``.jpg`` images available under ``images_dir``.
+        tsv_paths: Mapping of TSV name to its copied path.
+    """
+
     project_root: Path
     data_dir: Path
     training_dir: Path

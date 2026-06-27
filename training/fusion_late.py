@@ -30,6 +30,8 @@ evaluate_scores = evaluate_predictions
 
 
 class _TextScoreDataset(Dataset):
+    """Tokenise a list of texts for batched DistilBERT scoring."""
+
     def __init__(self, texts: list[str], tokenizer, max_length: int):
         self.texts = texts
         self.tokenizer = tokenizer
@@ -50,6 +52,8 @@ class _TextScoreDataset(Dataset):
 
 
 class _ImageScoreDataset(Dataset):
+    """Load and transform cohort images for batched ResNet scoring."""
+
     def __init__(self, frame: pd.DataFrame, root: Path, transform):
         self.frame = frame.reset_index(drop=True)
         self.root = root
@@ -171,6 +175,15 @@ def save_fusion_run(
     val_predictions: pd.DataFrame,
     combiner: LogisticRegression,
 ) -> None:
+    """Persist the late-fusion run: metrics, predictions, and the combiner.
+
+    Args:
+        run_dir: Destination run directory (created if needed).
+        metrics: Metrics dict serialised to ``metrics.json``.
+        val_predictions: Validation predictions written to ``predictions_val.tsv``.
+        combiner: The fitted logistic combiner pickled to
+            ``late_fusion_combiner.pkl``.
+    """
     run_dir.mkdir(parents=True, exist_ok=True)
     import json
 

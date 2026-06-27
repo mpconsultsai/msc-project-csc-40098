@@ -39,6 +39,15 @@ IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
 def _resolve_image_weights(project_root: Path) -> Path | None:
+    """Find the ResNet checkpoint under ``runs/``, preferring the final state.
+
+    Args:
+        project_root: Project root containing the ``runs/`` directory.
+
+    Returns:
+        The path to ``resnet18_state.pt``, else the latest per-epoch checkpoint,
+        else ``None`` if none exist.
+    """
     run_dir = project_root / "runs" / IMAGE_RUN_ID
     primary = run_dir / "resnet18_state.pt"
     if primary.is_file():
@@ -60,7 +69,18 @@ def resolve_image_weights_path(project_root: Path) -> Path:
 
 
 def require_unimodal_artifacts(project_root: Path) -> tuple[Path, Path]:
-    """Return (distilbert_model_dir, resnet_weights_path) or raise FileNotFoundError."""
+    """Ensure both unimodal checkpoints exist and return their paths.
+
+    Args:
+        project_root: Project root containing the ``runs/`` directory.
+
+    Returns:
+        A ``(distilbert_model_dir, resnet_weights_path)`` pair.
+
+    Raises:
+        FileNotFoundError: If either the DistilBERT model directory or the
+            ResNet weights are missing, with guidance on how to produce them.
+    """
     text_model = project_root / "runs" / TEXT_RUN_ID / "model"
     image_weights = _resolve_image_weights(project_root)
     missing: list[str] = []
@@ -93,6 +113,16 @@ class MultimodalEmbeddingDataset(Dataset):
         max_length: int,
         image_transform,
     ):
+        """Store the cohort frame and the text/image preprocessing config.
+
+        Args:
+            frame: Cohort frame with ``text``, ``cohort_image_local_path``, and
+                ``label_binary`` columns.
+            root: Root the relative image paths are resolved against.
+            tokenizer: Hugging Face tokenizer for the text field.
+            max_length: Maximum token sequence length.
+            image_transform: torchvision transform applied to each image.
+        """
         self.frame = frame.reset_index(drop=True)
         self.root = root
         self.tokenizer = tokenizer
@@ -103,6 +133,7 @@ class MultimodalEmbeddingDataset(Dataset):
         return len(self.frame)
 
     def __getitem__(self, idx: int):
+        """Return ``(token_dict, image_tensor, label)`` for the row at ``idx``."""
         row = self.frame.iloc[idx]
         enc = self.tokenizer(
             row["text"],
@@ -288,6 +319,17 @@ def extract_embeddings(
 
 
 def compute_class_weights(labels: np.ndarray, device: torch.device) -> torch.Tensor:
+    """Compute balanced class weights for a cross-entropy loss.
+
+    Uses the inverse class-frequency weighting (``total / (n_classes * count)``).
+
+    Args:
+        labels: Integer class labels for the training set.
+        device: Device to place the resulting tensor on.
+
+    Returns:
+        A 1-D tensor of per-class weights, ordered by class index.
+    """
     classes, counts = np.unique(labels, return_counts=True)
     total = counts.sum()
     weights = total / (len(classes) * counts)
@@ -376,6 +418,14 @@ def save_validation_figures(
     *,
     dpi: int = 150,
 ) -> None:
+    """Save the confusion-matrix and ROC/PR figures into a run directory.
+
+    Args:
+        run_dir: Destination run directory (created if needed).
+        fig_cm: The confusion-matrix figure.
+        fig_curves: The combined ROC and precision–recall figure.
+        dpi: Output resolution for the saved PNGs.
+    """
     run_dir.mkdir(parents=True, exist_ok=True)
     fig_cm.savefig(run_dir / "confusion_matrix.png", dpi=dpi, bbox_inches="tight")
     fig_curves.savefig(run_dir / "roc_pr_curves.png", dpi=dpi, bbox_inches="tight")
@@ -388,6 +438,15 @@ def save_run_artifacts(
     val_predictions: pd.DataFrame,
     extra_paths: dict[str, Path] | None = None,
 ) -> None:
+    """Write a run's metrics, validation predictions, and any extra files.
+
+    Args:
+        run_dir: Destination run directory (created if needed).
+        metrics: Metrics dict serialised to ``metrics.json``.
+        val_predictions: Validation predictions written to ``predictions_val.tsv``.
+        extra_paths: Optional ``{filename: source_path}`` files copied into the
+            run directory (only existing files are copied).
+    """
     run_dir.mkdir(parents=True, exist_ok=True)
     with (run_dir / "metrics.json").open("w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)

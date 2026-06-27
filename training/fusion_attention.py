@@ -54,6 +54,16 @@ class AttentionFusionHead(nn.Module):
     def forward(
         self, text_emb: torch.Tensor, image_emb: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Project, softmax-gate, and classify the two modality embeddings.
+
+        Args:
+            text_emb: Text embeddings, shape ``(B, text_dim)``.
+            image_emb: Image embeddings, shape ``(B, image_dim)``.
+
+        Returns:
+            A ``(logits, weights)`` pair: 2-class logits ``(B, 2)`` and the
+            per-sample modality attention weights ``(B, 2)`` (sum to 1).
+        """
         text_p = torch.tanh(self.text_proj(text_emb))
         image_p = torch.tanh(self.image_proj(image_emb))
         if self.text_norm is not None and self.image_norm is not None:
@@ -69,6 +79,12 @@ class AttentionFusionHead(nn.Module):
 
 @dataclass
 class AttentionFusionConfig:
+    """Hyperparameters for the attention-fusion head and its training.
+
+    ``proj_dim``, ``softmax_temperature``, and ``use_layer_norm`` are the
+    pre-registered Stage-2 tuning axes; their defaults reproduce Stage 1.
+    """
+
     proj_dim: int = 256
     softmax_temperature: float = 1.0
     use_layer_norm: bool = False
@@ -87,6 +103,18 @@ def train_attention_fusion_head(
     config: AttentionFusionConfig,
     device: torch.device,
 ) -> AttentionFusionHead:
+    """Train the attention-fusion head on precomputed embeddings.
+
+    Args:
+        text_train: Text embeddings, shape ``(N, 768)``.
+        image_train: Image embeddings, shape ``(N, 512)``.
+        y_train: Integer labels, shape ``(N,)``.
+        config: Training and architecture hyperparameters.
+        device: Device to train on.
+
+    Returns:
+        The trained :class:`AttentionFusionHead`.
+    """
     torch.manual_seed(config.random_seed)
     model = AttentionFusionHead(
         proj_dim=config.proj_dim,
@@ -131,6 +159,19 @@ def predict_attention_fusion(
     *,
     batch_size: int = 512,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Predict labels, fake probabilities, and attention weights.
+
+    Args:
+        model: A trained :class:`AttentionFusionHead`.
+        text_emb: Text embeddings, shape ``(N, 768)``.
+        image_emb: Image embeddings, shape ``(N, 512)``.
+        device: Device to run inference on.
+        batch_size: Inference batch size.
+
+    Returns:
+        A ``(y_pred, score_fake, attn)`` triple, where ``attn`` has shape
+        ``(N, 2)`` of ``[text, image]`` modality weights.
+    """
     model.eval()
     ds = TensorDataset(
         torch.from_numpy(text_emb),
@@ -163,6 +204,19 @@ def run_attention_fusion(
     device: torch.device,
     config: AttentionFusionConfig | None = None,
 ) -> tuple[dict, AttentionFusionHead, np.ndarray, np.ndarray, np.ndarray]:
+    """Run end-to-end attention fusion: embed, train the head, evaluate on val.
+
+    Args:
+        train_df: Training cohort frame.
+        val_df: Validation cohort frame.
+        project_root: Project root holding the unimodal checkpoints.
+        device: Device to run on.
+        config: Hyperparameters; defaults to :class:`AttentionFusionConfig`.
+
+    Returns:
+        A ``(metrics, head, y_pred, score_fake, attn_weights)`` tuple, where
+        ``metrics`` includes the mean per-modality attention weights.
+    """
     cfg = config or AttentionFusionConfig()
     text_dir, image_weights = require_unimodal_artifacts(project_root)
     text_model, tokenizer, image_backbone = load_frozen_encoders(

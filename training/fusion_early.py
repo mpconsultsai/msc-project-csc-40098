@@ -36,11 +36,14 @@ class EarlyFusionHead(nn.Module):
         self.classifier = nn.Linear(text_dim + image_dim, num_classes)
 
     def forward(self, text_emb: torch.Tensor, image_emb: torch.Tensor) -> torch.Tensor:
+        """Concatenate the modality embeddings and return 2-class logits."""
         return self.classifier(torch.cat([text_emb, image_emb], dim=1))
 
 
 @dataclass
 class EarlyFusionConfig:
+    """Hyperparameters for training the early-fusion head."""
+
     epochs: int = 8
     batch_size: int = 256
     learning_rate: float = 1e-3
@@ -56,6 +59,18 @@ def train_early_fusion_head(
     config: EarlyFusionConfig,
     device: torch.device,
 ) -> EarlyFusionHead:
+    """Train the early-fusion linear head on precomputed embeddings.
+
+    Args:
+        text_train: Text embeddings, shape ``(N, 768)``.
+        image_train: Image embeddings, shape ``(N, 512)``.
+        y_train: Integer labels, shape ``(N,)``.
+        config: Training hyperparameters.
+        device: Device to train on.
+
+    Returns:
+        The trained :class:`EarlyFusionHead` (in eval-ready state).
+    """
     torch.manual_seed(config.random_seed)
     model = EarlyFusionHead().to(device)
     class_weights = compute_class_weights(y_train, device)
@@ -96,6 +111,18 @@ def predict_early_fusion(
     *,
     batch_size: int = 512,
 ) -> tuple[np.ndarray, np.ndarray]:
+    """Predict labels and fake probabilities with the early-fusion head.
+
+    Args:
+        model: A trained :class:`EarlyFusionHead`.
+        text_emb: Text embeddings, shape ``(N, 768)``.
+        image_emb: Image embeddings, shape ``(N, 512)``.
+        device: Device to run inference on.
+        batch_size: Inference batch size.
+
+    Returns:
+        A ``(y_pred, score_fake)`` pair of arrays (threshold 0.5 for labels).
+    """
     model.eval()
     ds = TensorDataset(
         torch.from_numpy(text_emb),

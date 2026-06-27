@@ -24,7 +24,23 @@ def load_multimodal_cohort(
     *,
     seed: int = RANDOM_SEED,
 ) -> tuple[pd.DataFrame, dict[str, int]]:
-    """Join frozen text + image TSVs; keep rows with image file present on disk."""
+    """Build the multimodal cohort by joining the text and image exports.
+
+    Loads the text cohort, joins the local image path from the image export on
+    ``sample_id``, then drops rows whose image file is missing on disk.
+
+    Args:
+        project_root: Project root; resolved automatically if ``None``.
+        seed: Random seed passed through to the text cohort split.
+
+    Returns:
+        A ``(merged_df, stats)`` pair. ``stats`` reports row counts at each
+        stage (text cohort, after join, missing images, kept, train, validation).
+
+    Raises:
+        FileNotFoundError: If the image TSV is missing.
+        ValueError: If the image TSV row count is unexpected.
+    """
     root = resolve_project_root(project_root)
     image_tsv = root / "data" / IMAGE_TSV_NAME
     if not image_tsv.is_file():
@@ -56,13 +72,28 @@ def load_multimodal_cohort(
 
 
 def train_val_frames(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Split a cohort frame into its train and validation subsets.
+
+    Args:
+        df: A cohort frame with a ``split_study`` column.
+
+    Returns:
+        A ``(train_df, val_df)`` pair of copies.
+    """
     train: pd.DataFrame = df.loc[df["split_study"] == "train"].copy()
     val: pd.DataFrame = df.loc[df["split_study"] == "validation"].copy()
     return train, val
 
 
 def cohort_stats(df: pd.DataFrame) -> dict[str, object]:
-    """Summary counts for notebook logging / thesis footnotes."""
+    """Summarise the cohort for notebook logging and thesis footnotes.
+
+    Args:
+        df: The multimodal cohort frame.
+
+    Returns:
+        Row totals and per-split label/dataset breakdowns.
+    """
     train, val = train_val_frames(df)
     return {
         "rows_total": int(len(df)),
