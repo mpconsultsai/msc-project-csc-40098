@@ -11,9 +11,9 @@ project root unless they are absolute. Generated artefacts are written under
 `data/` (mostly gitignored).
 
 The model-training stage that consumes these outputs is described separately in
-[`training/README.md`](../training/README.md). Optional interactive QA and EDA
-over the generated artefacts lives in
-[`notebooks/fakenews_preprocessing_eda.ipynb`](notebooks/fakenews_preprocessing_eda.ipynb).
+[`training/README.md`](../training/README.md). An optional, read-only
+exploratory data analysis (EDA) notebook profiles the generated artefacts for
+QA and reporting — see [Section 6](#6-exploratory-data-analysis-eda-notebook).
 
 ## Contents
 
@@ -22,8 +22,9 @@ over the generated artefacts lives in
 - [How to run the pipeline](#3-how-to-run-the-pipeline)
 - [Scripts (01–12)](#4-scripts-0112)
 - [Outputs](#5-outputs)
-- [Unified table schema](#6-unified-table-schema)
-- [Sources and limitations](#7-sources-and-limitations)
+- [Exploratory data analysis (EDA) notebook](#6-exploratory-data-analysis-eda-notebook)
+- [Unified table schema](#7-unified-table-schema)
+- [Sources and limitations](#8-sources-and-limitations)
 
 ---
 
@@ -244,7 +245,40 @@ data/
 Large upstream clones and generated outputs stay **gitignored** in a fresh
 checkout, so `data/` starts empty.
 
-## 6. Unified table schema
+## 6. Exploratory data analysis (EDA) notebook
+
+[`notebooks/fakenews_preprocessing_eda.ipynb`](notebooks/fakenews_preprocessing_eda.ipynb)
+is an **optional, read-only** companion to the pipeline. It profiles the
+generated artefacts to surface data-quality issues *before* training and doubles
+as a reproducible, documented record of the dataset's properties for the
+write-up. It does not modify any pipeline output.
+
+It is organised into sections that mirror the pipeline:
+
+| Section | Profiles | Checks |
+|---------|----------|--------|
+| 1 | Unified `data/fakenews.tsv` | Row/column counts, nulls/blanks, duplicate `sample_id`, label balance, image-ref coverage by dataset |
+| 2–3 | Fakeddit metadata + FNN crawl | Bad/missing `image_url`, `hasImage`, crawl success vs. index counts |
+| 4 | Crawl-failure reconciliation | FNN rows in `fakenews.tsv` vs. succeeded JSON |
+| 5 | Image fetch log | `cohort_image_fetch.log` status breakdown, failures by dataset |
+| 6 | Gated export `data/fake_news_final.tsv` | Validity-score distribution, final label/dataset balance |
+
+**Running it.** Run it from the project root **in the same environment as the
+pipeline** (`pipeline/requirements.txt`). It needs the artefacts to exist first
+(at minimum `data/fakenews.tsv`; section 6 also needs `data/fake_news_final.tsv`).
+
+```bash
+jupyter lab pipeline/notebooks/fakenews_preprocessing_eda.ipynb
+# or run headless:
+jupyter nbconvert --to notebook --execute --inplace \
+  pipeline/notebooks/fakenews_preprocessing_eda.ipynb
+```
+
+> **Environment note.** Select the **project venv** as the Jupyter kernel. The
+> plots use `seaborn >= 0.13` (the `legend=` argument); an older system/Anaconda
+> seaborn will raise `Rectangle.set() got an unexpected keyword argument 'legend'`.
+
+## 7. Unified table schema
 
 `data/fakenews.tsv` has one row per sample. It is a lightweight index table — the
 nine core columns below (see
@@ -277,7 +311,7 @@ the text export, which keeps `fakenews.tsv` compact.
 - **`fake_news_final_text.tsv`** — the same cohort, with text columns restored from provenance.
 - **`fake_news_final_image.tsv`** — the subset with fetch OK + training-eligible + a local path.
 
-## 7. Sources and limitations
+## 8. Sources and limitations
 
 | Corpus | Role | Limitations |
 |--------|------|-------------|
