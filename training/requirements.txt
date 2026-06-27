@@ -1,4 +1,9 @@
-# Training / modelling environment (install from repository root)
+# Training / modelling dependency reference.
+#
+# Training runs in Google Colab, where each notebook installs the deep-learning
+# stack inline with `!pip install`. This file pins the exact versions for
+# reproducibility and for an optional local editor environment used only for
+# type-checking the training modules:
 #
 #   python3 -m venv .venv
 #   source .venv/bin/activate
