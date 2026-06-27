@@ -35,7 +35,7 @@ over the generated artefacts lives in
 | **Upstream repositories** | FakeNewsNet and Fakeddit, cloned under `pipeline/sources/` as nested Git repos (gitignored). See [Step 3.2](#step-32--clone-the-upstream-repositories). |
 | **Disk space** | Room for downloaded images and the upstream clones under `data/` and `pipeline/`. |
 
-> Run every command from the **project root** (e.g. `python pipeline/src/04_consolidate_fakenews_tsv.py all`). The numbered scripts are entrypoints; the supporting file `pipeline/reddit_placeholder_sha256.txt` (a SHA blocklist referenced by step `06`) is not executed directly.
+> Run every command from the **project root** (e.g. `python pipeline/src/04_consolidate_fakenews_tsv.py all`). The numbered scripts are entrypoints; the supporting file `pipeline/src/reddit_placeholder_sha256.txt` (a SHA blocklist referenced by step `06`) is not executed directly.
 
 ## 2. Pipeline flow
 
@@ -178,9 +178,10 @@ python pipeline/src/12_cohort_export_modality_views.py         # training export
 
 ## 4. Scripts (01–12)
 
-The entrypoint scripts live in `pipeline/src/` and run from the project root. The
-vendored upstream repositories (`pipeline/sources/fakenewsnet/`, `pipeline/sources/fakeddit/`) and
-the `pipeline/reddit_placeholder_sha256.txt` blocklist stay at the `pipeline/` root.
+The entrypoint scripts and the `reddit_placeholder_sha256.txt` blocklist (a SHA
+list referenced by step `06`) live in `pipeline/src/` and run from the project
+root. The vendored upstream repositories (`pipeline/sources/fakenewsnet/`,
+`pipeline/sources/fakeddit/`) stay under `pipeline/sources/`.
 
 | # | Script | Stage |
 |---|--------|-------|
