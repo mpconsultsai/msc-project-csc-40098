@@ -1,4 +1,21 @@
-"""Load ``runs/`` checkpoints and score single samples for the Gradio PoC."""
+"""Single-sample inference for the Gradio proof-of-concept UI.
+
+This module wraps the trained checkpoints under ``runs/`` behind a single
+:class:`InferenceEngine`. Given one text string and/or one PIL image, the engine
+dispatches to the scorer that matches a UI ``model_key`` and returns a small,
+JSON-friendly result dictionary.
+
+Every scorer returns a dict with at least:
+
+- ``label``: a user-facing verdict from :func:`label_from_score`.
+- ``score_fake``: ``P(fake)`` as a float in ``[0, 1]``.
+
+Fusion scorers add extra diagnostic keys (per-modality scores for late fusion,
+attention weights for attention fusion).
+
+The scoring logic is shared with the training notebooks by importing the
+``training/`` fusion helpers, so the UI and the experiments stay in step.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +28,7 @@ import joblib
 import numpy as np
 import torch
 from PIL import Image
+from torch import nn
 
 # training/ fusion helpers (same logic as the notebooks)
 _TRAINING = Path(__file__).resolve().parent.parent / "training"
@@ -39,7 +57,11 @@ THRESHOLD = 0.5
 
 
 def pick_device() -> torch.device:
-    """Return CUDA, Apple MPS, or CPU depending on what PyTorch can use."""
+    """Select the best available PyTorch device.
+
+    Returns:
+        The CUDA device if available, else Apple MPS, else CPU.
+    """
     if torch.cuda.is_available():
         return torch.device("cuda")
     if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
@@ -48,11 +70,30 @@ def pick_device() -> torch.device:
 
 
 def label_from_score(score_fake: float) -> str:
-    """Map P(fake) to a user-facing label using :data:`THRESHOLD` (0.5)."""
+    """Map a fake-probability score to a user-facing label.
+
+    Args:
+        score_fake: ``P(fake)`` in ``[0, 1]``.
+
+    Returns:
+        ``"Likely fake"`` if ``score_fake`` is at least :data:`THRESHOLD`
+        (0.5), otherwise ``"Likely real"``.
+    """
     return "Likely fake" if score_fake >= THRESHOLD else "Likely real"
 
 
 def _result(score_fake: float, **extra: Any) -> dict[str, Any]:
+    """Build the standard result dict, optionally augmented with diagnostics.
+
+    Args:
+        score_fake: ``P(fake)`` in ``[0, 1]``.
+        **extra: Optional per-model diagnostics merged into the result, e.g.
+            ``score_text`` / ``score_image`` for late fusion or
+            ``attn_text`` / ``attn_image`` for attention fusion.
+
+    Returns:
+        A dict with ``label`` and ``score_fake`` keys plus any ``extra`` keys.
+    """
     return {"label": label_from_score(score_fake), "score_fake": score_fake, **extra}
 
 
@@ -60,6 +101,12 @@ class InferenceEngine:
     """Lazy-load checkpoints from ``runs/`` and dispatch to the matching scorer."""
 
     def __init__(self, project_root: Path):
+        """Configure paths and device; checkpoints load lazily on first use.
+
+        Args:
+            project_root: Repository root containing the ``runs/`` directory with
+                the trained checkpoints.
+        """
         self.root = project_root
         self.runs = project_root / "runs"
         self.device = pick_device()
@@ -71,7 +118,23 @@ class InferenceEngine:
         image: Image.Image | None,
         model_key: str,
     ) -> dict[str, Any]:
-        """Score one sample for a UI ``model_key`` (see ``gradio-ui.py`` dropdown)."""
+        """Score one sample for a UI ``model_key`` (see ``gradio-ui.py`` dropdown).
+
+        Args:
+            text: Raw post text; ``None`` or whitespace is treated as empty.
+            image: A PIL image, required for the image and fusion models.
+            model_key: One of the supported keys (``text_tfidf``,
+                ``text_distilbert``, ``image_resnet18``, ``fusion_late``,
+                ``fusion_early``, ``fusion_attention``).
+
+        Returns:
+            A result dict (see the module docstring).
+
+        Raises:
+            ValueError: If ``model_key`` is not recognised, or a required input
+                (e.g. an image for an image/fusion model) is missing.
+            FileNotFoundError: If the checkpoint for the model is absent.
+        """
         text_clean = (text or "").strip()
         handlers: dict[str, Callable[[], dict[str, Any]]] = {
             "text_tfidf": lambda: self._predict_tfidf(text_clean),
@@ -87,12 +150,32 @@ class InferenceEngine:
             raise ValueError(f"Unknown model_key: {model_key}") from exc
 
     def _cached(self, key: str, loader: Callable[[], Any]) -> Any:
+        """Memoise a loaded artefact so each checkpoint loads at most once.
+
+        Args:
+            key: Cache key identifying the artefact.
+            loader: Zero-argument callable that loads the artefact on a cache miss.
+
+        Returns:
+            The cached artefact, loading it via ``loader`` on first access.
+        """
         if key not in self._cache:
             self._cache[key] = loader()
         return self._cache[key]
 
     def _predict_tfidf(self, text: str) -> dict[str, Any]:
-        def load():
+        """Score text with the TF-IDF + logistic-regression sklearn pipeline.
+
+        Args:
+            text: Cleaned post text.
+
+        Returns:
+            A standard result dict.
+
+        Raises:
+            FileNotFoundError: If the saved TF-IDF pipeline is missing.
+        """
+        def load() -> Any:
             path = self.runs / "text_tfidf_baseline" / TFIDF_PIPELINE_NAME
             if not path.is_file():
                 raise FileNotFoundError(
@@ -105,11 +188,30 @@ class InferenceEngine:
         return _result(score_fake)
 
     def _predict_distilbert(self, text: str) -> dict[str, Any]:
+        """Score text with the fine-tuned DistilBERT classifier.
+
+        Args:
+            text: Cleaned post text.
+
+        Returns:
+            A standard result dict.
+        """
         model, tokenizer = self._cached("distilbert", self._load_distilbert)
         score_fake = score_text_sample(text, model, tokenizer, self.device)
         return _result(score_fake)
 
     def _predict_resnet(self, image: Image.Image | None) -> dict[str, Any]:
+        """Score an image with the ResNet-18 classifier.
+
+        Args:
+            image: The PIL image to score.
+
+        Returns:
+            A standard result dict.
+
+        Raises:
+            ValueError: If ``image`` is ``None``.
+        """
         if image is None:
             raise ValueError("Image required")
         model = self._cached("resnet", self._load_resnet)
@@ -119,6 +221,19 @@ class InferenceEngine:
     def _predict_fusion_late(
         self, text: str, image: Image.Image | None
     ) -> dict[str, Any]:
+        """Late fusion: combine the DistilBERT and ResNet scores via the logistic combiner.
+
+        Args:
+            text: Cleaned post text.
+            image: The PIL image to score.
+
+        Returns:
+            A standard result dict, plus the per-modality scores
+            ``score_text`` and ``score_image``.
+
+        Raises:
+            ValueError: If ``image`` is ``None``.
+        """
         if image is None:
             raise ValueError("Image required for fusion")
         score_text = self._predict_distilbert(text)["score_fake"]
@@ -141,6 +256,18 @@ class InferenceEngine:
     def _predict_fusion_early(
         self, text: str, image: Image.Image | None
     ) -> dict[str, Any]:
+        """Early fusion: concatenate frozen embeddings and score with the linear head.
+
+        Args:
+            text: Cleaned post text.
+            image: The PIL image to score.
+
+        Returns:
+            A standard result dict.
+
+        Raises:
+            ValueError: If ``image`` is ``None``.
+        """
         if image is None:
             raise ValueError("Image required for fusion")
         text_emb, image_emb = self._sample_embeddings(text, image)
@@ -154,6 +281,19 @@ class InferenceEngine:
     def _predict_fusion_attention(
         self, text: str, image: Image.Image | None
     ) -> dict[str, Any]:
+        """Attention fusion: score with the attention head and return the modality weights.
+
+        Args:
+            text: Cleaned post text.
+            image: The PIL image to score.
+
+        Returns:
+            A standard result dict, plus ``attn_text`` and ``attn_image``
+            (softmax modality weights that sum to 1).
+
+        Raises:
+            ValueError: If ``image`` is ``None``.
+        """
         if image is None:
             raise ValueError("Image required for fusion")
         text_emb, image_emb = self._sample_embeddings(text, image)
@@ -173,25 +313,56 @@ class InferenceEngine:
     def _sample_embeddings(
         self, text: str, image: Image.Image
     ) -> tuple[np.ndarray, np.ndarray]:
+        """Extract the frozen embeddings shared by both feature-level fusion heads.
+
+        Args:
+            text: Cleaned post text.
+            image: The PIL image to embed.
+
+        Returns:
+            A ``(text_embedding, image_embedding)`` pair of NumPy arrays.
+        """
         text_model, tokenizer, image_backbone = self._cached("encoders", self._load_encoders)
         return extract_sample_embeddings(
             text, image, text_model, tokenizer, image_backbone, self.device
         )
 
-    def _load_distilbert(self):
+    def _load_distilbert(self) -> tuple[nn.Module, Any]:
+        """Load the fine-tuned DistilBERT classifier.
+
+        Returns:
+            A ``(model, tokenizer)`` pair.
+        """
         text_dir, _ = require_unimodal_artifacts(self.root)
         return load_distilbert_classifier(text_dir, self.device)
 
-    def _load_resnet(self):
+    def _load_resnet(self) -> nn.Module:
+        """Load the ResNet-18 image classifier from its saved state dict.
+
+        Returns:
+            The ResNet-18 classifier model.
+        """
         weights = resolve_image_weights_path(self.root)
         return load_resnet_classifier(weights, self.device)
 
-    def _load_encoders(self):
+    def _load_encoders(self) -> tuple[nn.Module, Any, nn.Module]:
+        """Load the frozen encoders used for early and attention fusion.
+
+        Returns:
+            A ``(text_model, tokenizer, image_backbone)`` tuple.
+        """
         text_dir, image_weights = require_unimodal_artifacts(self.root)
         return load_frozen_encoders(text_dir, image_weights, self.device)
 
 
 @lru_cache(maxsize=1)
 def get_engine(project_root: str | Path) -> InferenceEngine:
-    """Return a process-wide :class:`InferenceEngine` (one instance per root path)."""
+    """Return a process-wide :class:`InferenceEngine`, cached per root path.
+
+    Args:
+        project_root: Repository root passed to :class:`InferenceEngine`.
+
+    Returns:
+        A shared :class:`InferenceEngine` instance for ``project_root``.
+    """
     return InferenceEngine(Path(project_root))
