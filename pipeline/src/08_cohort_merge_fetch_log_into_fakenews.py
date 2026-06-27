@@ -7,8 +7,8 @@ Adds ``cohort_image_fetch_status``, ``cohort_image_local_path``, ``cohort_image_
 ``--no-backup``. Close ``fakenews.tsv`` in the IDE before running on large files. Paths resolve
 from the project root.
 
-    python pipeline/08_cohort_merge_fetch_log_into_fakenews.py
-    python pipeline/08_cohort_merge_fetch_log_into_fakenews.py --dry-run
+    python pipeline/src/08_cohort_merge_fetch_log_into_fakenews.py
+    python pipeline/src/08_cohort_merge_fetch_log_into_fakenews.py --dry-run
 
 Backup and custom paths: ``--help``.
 """
@@ -21,7 +21,7 @@ import shutil
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from _paths import PROJECT_ROOT
 
 DEFAULT_FAKENEWS = Path("data/fakenews.tsv")
 DEFAULT_FETCH_LOG = Path("data/processed/images/cohort_image_fetch.log")

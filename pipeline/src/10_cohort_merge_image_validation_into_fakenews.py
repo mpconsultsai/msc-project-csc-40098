@@ -6,8 +6,8 @@ Adds ``image_option1_validity_score``, ``image_option1_qc_flags``, and
 TSV and writes a ``*.image_validation_merge.bak`` backup unless ``--no-backup``. Close
 ``fakenews.tsv`` in the IDE before running on large files. Paths resolve from the project root.
 
-    python pipeline/10_cohort_merge_image_validation_into_fakenews.py
-    python pipeline/10_cohort_merge_image_validation_into_fakenews.py --dry-run
+    python pipeline/src/10_cohort_merge_image_validation_into_fakenews.py
+    python pipeline/src/10_cohort_merge_image_validation_into_fakenews.py --dry-run
 
 ``--min-score``, backup, and progress interval: ``--help``.
 """
@@ -20,7 +20,7 @@ import shutil
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from _paths import PROJECT_ROOT
 
 DEFAULT_FAKENEWS = Path("data/fakenews.tsv")
 DEFAULT_VALIDATION = Path("data/processed/cohorts/image_validation/cohort_image_validation.tsv")

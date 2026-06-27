@@ -1,13 +1,13 @@
 {
   "venvPath": ".",
   "venv": ".venv",
-  "extraPaths": ["pipeline/fakenewsnet/code", "training", "ui"],
+  "extraPaths": ["pipeline/sources/fakenewsnet/code", "pipeline/src", "training/src", "ui"],
   "reportMissingImports": "none",
   "reportMissingModuleSource": "none",
   "executionEnvironments": [
     { "root": "." },
     { "root": "pipeline" },
-    { "root": "training", "extraPaths": ["."] },
-    { "root": "ui", "extraPaths": ["../training", "."] }
+    { "root": "training/src", "extraPaths": ["."] },
+    { "root": "ui", "extraPaths": ["../training/src", "."] }
   ]
 }

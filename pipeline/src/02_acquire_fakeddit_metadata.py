@@ -4,9 +4,9 @@ Download Fakeddit v2.0 text/metadata TSVs from Google Drive.
 Writes multimodal train/validation/test TSVs under ``<out>/v2_text_metadata/`` (labels, text fields,
 ``image_url``, etc.). This is the usual acquire step before ``04_consolidate_fakenews_tsv.py``.
 
-Requires: ``pip install gdown``. Official links: ``pipeline/fakeddit/README.md``.
+Requires: ``pip install gdown``. Official links: ``pipeline/sources/fakeddit/README.md``.
 
-    python pipeline/02_acquire_fakeddit_metadata.py --out data/processed/fakeddit
+    python pipeline/src/02_acquire_fakeddit_metadata.py --out data/processed/fakeddit
 """
 
 from __future__ import annotations

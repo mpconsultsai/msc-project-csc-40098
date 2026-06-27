@@ -5,8 +5,8 @@ Reads rows with ``has_image_ref=true``, splits them by ``(dataset, label_binary)
 ``--n`` primary slots proportionally per stratum, and adds reserve rows for image-fetch backfill.
 Writes a plan TSV for ``06_cohort_fetch_images.py``. Paths resolve from the project root.
 
-    python pipeline/05_cohort_build_plan.py
-    python pipeline/05_cohort_build_plan.py --n 50000 --seed 42
+    python pipeline/src/05_cohort_build_plan.py
+    python pipeline/src/05_cohort_build_plan.py --n 50000 --seed 42
 
 Fakeddit split filtering, reserve sizing, and output shuffle: ``--help`` or
 ``pipeline/README.md``.
@@ -21,7 +21,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from _paths import PROJECT_ROOT
 
 
 def _largest_remainder_allocation(counts: dict[str, int], total: int) -> dict[str, int]:

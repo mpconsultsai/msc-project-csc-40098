@@ -17,7 +17,7 @@ Typical notebook pattern (two cells after ``pip install``)::
     if TRAINING.exists():
         shutil.rmtree(TRAINING)
     shutil.copytree(TRAINING_SRC, TRAINING)
-    sys.path.insert(0, str(TRAINING))
+    sys.path.insert(0, str(TRAINING / "src"))  # importable modules live in training/src/
 
     # Cell B — per notebook (example: image + fusion)
     from colab_setup import require_cuda, setup_colab_project
@@ -129,7 +129,7 @@ def sync_training_helpers(
     drive_training: Path | None = None,
     allow_upload: bool = True,
 ) -> Path:
-    """Copy My Drive/training/ → project_root/training/ (cohort_*.py, colab_setup.py)."""
+    """Copy My Drive/training/ → project_root/training/ (modules under src/: cohort_*.py, colab_setup.py)."""
     src = drive_training or (DEFAULT_DRIVE_MY / "training")
     dst = project_root / "training"
     if src.is_dir():
@@ -299,8 +299,9 @@ def setup_colab_project(
     training_dir = sync_training_helpers(
         project_root, allow_upload=allow_upload
     )
-    if str(training_dir) not in sys.path:
-        sys.path.insert(0, str(training_dir))
+    src_dir = training_dir / "src"
+    if str(src_dir) not in sys.path:
+        sys.path.insert(0, str(src_dir))
 
     image_count = 0
     images_dir = project_root / "data/processed/images"

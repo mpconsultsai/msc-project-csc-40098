@@ -37,16 +37,16 @@ In the IDE, point the Python interpreter at `.venv/bin/python` (macOS/Linux) or
 
 ## Upstream repositories
 
-The two source corpora are cloned under `pipeline/` as nested Git repos
+The two source corpora are cloned under `pipeline/sources/` as nested Git repos
 (gitignored):
 
 | Path | Source |
 |------|--------|
-| `pipeline/fakenewsnet/` | [KaiDMML/FakeNewsNet](https://github.com/KaiDMML/FakeNewsNet) — minimal CSVs under `dataset/` |
-| `pipeline/fakeddit/` | [entitize/Fakeddit](https://github.com/entitize/Fakeddit) — scripts; large TSVs from Google Drive per the upstream README |
+| `pipeline/sources/fakenewsnet/` | [KaiDMML/FakeNewsNet](https://github.com/KaiDMML/FakeNewsNet) — minimal CSVs under `dataset/` |
+| `pipeline/sources/fakeddit/` | [entitize/Fakeddit](https://github.com/entitize/Fakeddit) — scripts; large TSVs from Google Drive per the upstream README |
 
-Update the clones with `git -C pipeline/fakenewsnet pull` and
-`git -C pipeline/fakeddit pull`.
+Update the clones with `git -C pipeline/sources/fakenewsnet pull` and
+`git -C pipeline/sources/fakeddit pull`.
 
 ## Repository notes
 

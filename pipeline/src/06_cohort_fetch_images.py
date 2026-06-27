@@ -5,7 +5,7 @@ Writes one image per ``sample_id`` under ``data/processed/images/`` and appends 
 ``cohort_image_fetch.log``. Resume is log-based: any ``sample_id`` already logged as ok or fail is
 skipped unless ``--force``. Paths resolve from the project root.
 
-    python -u pipeline/06_cohort_fetch_images.py --plan-tsv data/processed/cohorts/multimodal_plan_n50000_seed42.tsv
+    python -u pipeline/src/06_cohort_fetch_images.py --plan-tsv data/processed/cohorts/multimodal_plan_n50000_seed42.tsv
 
 Limits, stop-after-ok, placeholder blocklist, and retry behaviour: ``--help``.
 """
@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from _paths import PROJECT_ROOT
 
 DEFAULT_OUT_DIR = Path("data/processed/images")
 DEFAULT_PLAN = Path("data/processed/cohorts/multimodal_plan_n50000_seed42.tsv")

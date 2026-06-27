@@ -54,19 +54,20 @@ My Drive/
 │   ├── fake_news_final_image.tsv
 │   └── images.zip
 └── training/
-    ├── colab_setup.py
-    ├── cohort_text.py
-    ├── cohort_image.py
-    ├── cohort_multimodal.py
-    ├── fusion_common.py
-    ├── fusion_late.py
-    ├── fusion_early.py
-    └── fusion_attention.py
+    └── src/
+        ├── colab_setup.py
+        ├── cohort_text.py
+        ├── cohort_image.py
+        ├── cohort_multimodal.py
+        ├── fusion_common.py
+        ├── fusion_late.py
+        ├── fusion_early.py
+        └── fusion_attention.py
 ```
 
-Copy every `.py` file from this `training/` directory into `My Drive/training/`.
-Whenever you change one of these files, re-upload it so Colab uses the latest
-version.
+Copy the `src/` folder (all the `.py` modules) from this `training/` directory
+into `My Drive/training/`, keeping the `src/` subfolder. Whenever you change one
+of these files, re-upload it so Colab uses the latest version.
 
 > A `My Drive/runs/` folder is **created automatically** the first time you run a
 > notebook — you do not need to create it yourself. Trained checkpoints and
@@ -97,11 +98,11 @@ PROJECT_ROOT = Path("/content/msc")
 TRAINING_SRC = Path("/content/drive/MyDrive/training")
 TRAINING = PROJECT_ROOT / "training"
 if not TRAINING_SRC.is_dir():
-    raise FileNotFoundError("Sync the repo's training/ folder to My Drive/training/")
+    raise FileNotFoundError("Sync the repo's training/src/ to My Drive/training/src/")
 if TRAINING.exists():
     shutil.rmtree(TRAINING)
 shutil.copytree(TRAINING_SRC, TRAINING)
-sys.path.insert(0, str(TRAINING))
+sys.path.insert(0, str(TRAINING / "src"))  # importable modules live in training/src/
 ```
 
 **Cell B — project setup (per notebook).** Copies the required TSVs (and images,
@@ -146,6 +147,9 @@ required checkpoints are missing.
 
 ## 3. Notebooks and modules
 
+On disk, the runnable notebooks live in `training/notebooks/` and the importable
+helper modules in `training/src/`. The tables below list them by name.
+
 **Notebooks (open these in Colab):**
 
 | Notebook | Runtime | Purpose |
@@ -155,7 +159,7 @@ required checkpoints are missing.
 | `training_image_resnet.ipynb` | GPU | ResNet-18 image baseline → `runs/image_resnet18_baseline/`. |
 | `training_fusion.ipynb` | GPU | RQ2 / RQ3: late, early, and attention fusion plus a summary table. |
 
-**Supporting modules (synced to `My Drive/training/`; not run directly):**
+**Supporting modules (in `training/src/`, synced to `My Drive/training/src/`; not run directly):**
 
 | Module | Purpose |
 |--------|---------|

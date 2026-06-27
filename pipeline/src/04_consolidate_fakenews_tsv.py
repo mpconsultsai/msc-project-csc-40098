@@ -4,9 +4,9 @@ Build ``data/fakenews.tsv`` from Fakeddit multimodal TSVs and FakeNewsNet ``news
 Run after **01** (FNN crawl) and **02** (Fakeddit metadata), or whenever the unified table needs
 refreshing. Output schema: ``pipeline/README.md`` (Unified table schema). Paths resolve from the project root.
 
-    python pipeline/04_consolidate_fakenews_tsv.py all
-    python pipeline/04_consolidate_fakenews_tsv.py fakeddit
-    python pipeline/04_consolidate_fakenews_tsv.py fakenewsnet
+    python pipeline/src/04_consolidate_fakenews_tsv.py all
+    python pipeline/src/04_consolidate_fakenews_tsv.py fakeddit
+    python pipeline/src/04_consolidate_fakenews_tsv.py fakenewsnet
 
 Subcommands, defaults, and FNN failure-log behaviour: ``--help``.
 """
@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 from typing import Any, Iterable
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from _paths import PROJECT_ROOT
 
 _FAKEDDIT_SPLIT: dict[str, str] = {
     "multimodal_train.tsv": "train",
@@ -382,8 +382,8 @@ def main() -> int:
     p_all.add_argument(
         "--dataset-dir",
         type=Path,
-        default=Path("pipeline/fakenewsnet/dataset"),
-        help="FakeNewsNet index CSVs for URLs/titles (default: pipeline/fakenewsnet/dataset)",
+        default=Path("pipeline/sources/fakenewsnet/dataset"),
+        help="FakeNewsNet index CSVs for URLs/titles (default: pipeline/sources/fakenewsnet/dataset)",
     )
     p_all.set_defaults(func=_run_all)
 
@@ -412,8 +412,8 @@ def main() -> int:
     p_fn.add_argument(
         "--dataset-dir",
         type=Path,
-        default=Path("pipeline/fakenewsnet/dataset"),
-        help="Index CSVs (default: pipeline/fakenewsnet/dataset)",
+        default=Path("pipeline/sources/fakenewsnet/dataset"),
+        help="Index CSVs (default: pipeline/sources/fakenewsnet/dataset)",
     )
     p_fn.set_defaults(func=_run_fakenewsnet)
 

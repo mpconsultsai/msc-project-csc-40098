@@ -5,8 +5,8 @@ Keeps the latest ``ok`` row when any succeeded; otherwise the latest ``fail``. D
 which ids step 06 skips on resume — only removes duplicate log lines. Creates ``.bak`` unless
 ``--dry-run``. Default log: ``data/processed/images/cohort_image_fetch.log``.
 
-    python pipeline/07_qa_cohort_dedupe_fetch_log.py
-    python pipeline/07_qa_cohort_dedupe_fetch_log.py --dry-run
+    python pipeline/src/07_qa_cohort_dedupe_fetch_log.py
+    python pipeline/src/07_qa_cohort_dedupe_fetch_log.py --dry-run
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from _paths import PROJECT_ROOT
 DEFAULT_LOG = Path("data/processed/images/cohort_image_fetch.log")
 
 

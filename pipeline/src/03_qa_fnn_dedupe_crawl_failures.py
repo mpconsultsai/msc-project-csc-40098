@@ -7,9 +7,9 @@ considered “known failures” for skip logic — it only removes repeat events
 
 Creates ``<log>.bak`` next to the log before overwriting (unless ``--dry-run``).
 
-    python pipeline/03_qa_fnn_dedupe_crawl_failures.py
-    python pipeline/03_qa_fnn_dedupe_crawl_failures.py --dry-run
-    python pipeline/03_qa_fnn_dedupe_crawl_failures.py --log path/to/crawl_failures.jsonl
+    python pipeline/src/03_qa_fnn_dedupe_crawl_failures.py
+    python pipeline/src/03_qa_fnn_dedupe_crawl_failures.py --dry-run
+    python pipeline/src/03_qa_fnn_dedupe_crawl_failures.py --log path/to/crawl_failures.jsonl
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from _paths import PROJECT_ROOT
 DEFAULT_LOG = Path("data/processed/fakenewsnet/crawl_failures.jsonl")
 
 

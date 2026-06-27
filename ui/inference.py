@@ -14,7 +14,7 @@ Fusion scorers add extra diagnostic keys (per-modality scores for late fusion,
 attention weights for attention fusion).
 
 The scoring logic is shared with the training notebooks by importing the
-``training/`` fusion helpers, so the UI and the experiments stay in step.
+``training/src`` fusion helpers, so the UI and the experiments stay in step.
 """
 
 from __future__ import annotations
@@ -30,10 +30,10 @@ import torch
 from PIL import Image
 from torch import nn
 
-# training/ fusion helpers (same logic as the notebooks)
-_TRAINING = Path(__file__).resolve().parent.parent / "training"
-if str(_TRAINING) not in sys.path:
-    sys.path.insert(0, str(_TRAINING))
+# training/src fusion helpers (same logic as the notebooks)
+_TRAINING_SRC = Path(__file__).resolve().parent.parent / "training" / "src"
+if str(_TRAINING_SRC) not in sys.path:
+    sys.path.insert(0, str(_TRAINING_SRC))
 
 from fusion_attention import load_attention_head_checkpoint, predict_attention_fusion  # noqa: E402
 from fusion_common import (  # noqa: E402

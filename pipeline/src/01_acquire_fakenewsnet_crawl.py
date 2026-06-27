@@ -1,7 +1,7 @@
 """
 Crawl FakeNewsNet article text and image URLs from news-site links in the official CSVs.
 
-Uses the upstream FakeNewsNet news crawler (``pipeline/fakenewsnet/code``; newspaper3k + optional
+Uses the upstream FakeNewsNet news crawler (``pipeline/sources/fakenewsnet/code``; newspaper3k + optional
 Wayback fallback). News articles only — not FNN's optional social/Twitter layer. Each story is saved as ``news content.json``
 under ``<out>/<source>/<label>/<id>/``; failed fetches are appended to ``<out>/crawl_failures.jsonl``.
 
@@ -11,7 +11,7 @@ site changes, Wayback differences). Compare runs by story id, not identical JSON
 Relative ``--out`` and ``--dataset-dir`` paths resolve from the project root (parent of ``pipeline/``).
 
     pip install -r requirements-fakenewsnet-crawl.txt
-    python pipeline/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --resume
+    python pipeline/src/01_acquire_fakenewsnet_crawl.py --out data/processed/fakenewsnet --resume
 
 Resume, failure-log skip logic, performance flags, and optional post-crawl consolidation: see
 ``pipeline/README.md`` or ``--help``.
@@ -28,6 +28,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from _paths import PROJECT_ROOT
 
 
 def _utc_iso() -> str:
@@ -220,14 +222,14 @@ def main() -> int:
     Returns:
         ``0`` on success, ``1`` on invalid args or missing upstream clone/dataset paths.
     """
-    root = Path(__file__).resolve().parents[1]
+    root = PROJECT_ROOT
     parser = argparse.ArgumentParser(
         description="Crawl FakeNewsNet article JSON from index CSVs (newspaper3k; news articles only)."
     )
     parser.add_argument(
         "--dataset-dir",
         type=Path,
-        default=root / "pipeline" / "fakenewsnet" / "dataset",
+        default=root / "pipeline" / "sources" / "fakenewsnet" / "dataset",
         help="Directory with politifact_*.csv and gossipcop_*.csv",
     )
     parser.add_argument(
@@ -347,9 +349,9 @@ def main() -> int:
         file=sys.stderr,
     )
 
-    code_dir = root / "pipeline" / "fakenewsnet" / "code"
+    code_dir = root / "pipeline" / "sources" / "fakenewsnet" / "code"
     if not code_dir.is_dir():
-        print("Missing FakeNewsNet clone at pipeline/fakenewsnet/code", file=sys.stderr)
+        print("Missing FakeNewsNet clone at pipeline/sources/fakenewsnet/code", file=sys.stderr)
         return 1
     if not dataset_dir.is_dir():
         print(f"Dataset directory not found: {dataset_dir}", file=sys.stderr)
@@ -511,7 +513,7 @@ def main() -> int:
             "skipped_resume": total_skipped,
             "skipped_known_failure": total_skipped_known_failure,
         },
-        "note": "FNN's optional social/Twitter collection uses upstream main.py + API keys (see pipeline/fakenewsnet/README.md).",
+        "note": "FNN's optional social/Twitter collection uses upstream main.py + API keys (see pipeline/sources/fakenewsnet/README.md).",
     }
     (out / "_manifest.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
@@ -524,10 +526,10 @@ def main() -> int:
     if not args.no_consolidate_image_refs:
         tsv_out = _resolve_project_path(args.image_refs_out, root)
         fakeddit_root = _resolve_project_path(args.consolidate_fakeddit_root, root)
-        script = root / "pipeline" / "04_consolidate_fakenews_tsv.py"
+        script = root / "pipeline" / "src" / "04_consolidate_fakenews_tsv.py"
         if not script.is_file():
             print(
-                "Skipping image-ref consolidation: pipeline/04_consolidate_fakenews_tsv.py not found. "
+                "Skipping image-ref consolidation: pipeline/src/04_consolidate_fakenews_tsv.py not found. "
                 "Use --no-consolidate-image-refs to silence this, or add that script.",
                 file=sys.stderr,
             )

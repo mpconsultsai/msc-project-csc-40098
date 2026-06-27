@@ -6,7 +6,7 @@ Restores ``text`` / ``title_raw`` / ``article_url`` from each row's ``provenance
 with a local path). Used for Goal 2 single-modality baselines and by ``training/``. Paths resolve
 from the project root.
 
-    python pipeline/12_cohort_export_modality_views.py
+    python pipeline/src/12_cohort_export_modality_views.py
 
 Custom input/output paths: ``--help``.
 """
@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 from typing import Dict
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from _paths import PROJECT_ROOT
 
 DEFAULT_INPUT = Path("data/fake_news_final.tsv")
 DEFAULT_TEXT_OUTPUT = Path("data/fake_news_final_text.tsv")

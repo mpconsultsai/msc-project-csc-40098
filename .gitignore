@@ -66,8 +66,8 @@ temp/
 *.tmp
 
 # Upstream corpus clones under pipeline/ (nested .git — do not commit; clone per pipeline/README.md)
-pipeline/fakenewsnet/
-pipeline/fakeddit/
+pipeline/sources/fakenewsnet/
+pipeline/sources/fakeddit/
 
 # Large generated / downloaded trees under data/processed/
 data/*

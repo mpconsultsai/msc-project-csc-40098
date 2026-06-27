@@ -5,8 +5,8 @@ Reads ``ok`` rows from ``cohort_image_fetch.log`` (from step 06), assigns a 1–
 and QC flags per image, and writes outputs under ``data/processed/cohorts/image_validation/``. The
 score is a heuristic (not ground truth). Paths resolve from the project root.
 
-    python pipeline/09_cohort_image_validation.py
-    python pipeline/09_cohort_image_validation.py --resume
+    python pipeline/src/09_cohort_image_validation.py
+    python pipeline/src/09_cohort_image_validation.py --resume
 
 Resume, limits, sort-only, and step 10 merge: ``--help``.
 """
@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from _paths import PROJECT_ROOT
 
 DEFAULT_FETCH_LOG = Path("data/processed/images/cohort_image_fetch.log")
 DEFAULT_OUT_DIR = Path("data/processed/cohorts/image_validation")

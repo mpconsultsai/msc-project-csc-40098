@@ -15,5 +15,5 @@ exclude =
     *.egg,
     build,
     dist,
-    pipeline/fakenewsnet,
-    pipeline/fakeddit
+    pipeline/sources/fakenewsnet,
+    pipeline/sources/fakeddit

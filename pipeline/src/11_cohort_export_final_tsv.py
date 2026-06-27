@@ -4,8 +4,8 @@ Export training-gated rows from ``fakenews.tsv`` to ``fake_news_final.tsv`` (aft
 Keeps rows with ``image_option1_validity_score`` >= ``--min-score`` (default 75, inclusive).
 Output has the same columns as the input. Paths resolve from the project root.
 
-    python pipeline/11_cohort_export_final_tsv.py
-    python pipeline/11_cohort_export_final_tsv.py --min-score 76
+    python pipeline/src/11_cohort_export_final_tsv.py
+    python pipeline/src/11_cohort_export_final_tsv.py --min-score 76
 
 Custom input/output paths: ``--help``.
 """
@@ -17,7 +17,7 @@ import csv
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from _paths import PROJECT_ROOT
 
 DEFAULT_INPUT = Path("data/fakenews.tsv")
 DEFAULT_OUTPUT = Path("data/fake_news_final.tsv")

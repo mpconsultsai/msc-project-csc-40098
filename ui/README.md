@@ -80,7 +80,7 @@ Gradio (gradio-ui.py)
 | `fusion_early` | `early_fusion_head.pt` + the unimodal dirs | Frozen encoders → concat → linear head |
 | `fusion_attention` | `attention_fusion_head.pt` + the unimodal dirs | Frozen encoders → attention head |
 
-`ui/inference.py` reuses `training/fusion_*.py` and `fusion_common.py`, so the
+`ui/inference.py` reuses `training/src/fusion_*.py` and `fusion_common.py`, so the
 prediction logic matches the fusion notebook, adapted for a single text + PIL
 image. When the artefacts for the selected model are present, the app returns a
 label, a fake-probability score, and the inference latency.
