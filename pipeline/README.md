@@ -11,8 +11,9 @@ unless they are absolute. Generated artefacts are written under `data/` (mostly
 gitignored).
 
 The model-training stage that consumes these outputs is described separately in
-[`training/README.md`](../training/README.md). Optional interactive EDA lives in
-[`notebooks/fakenews_preprocessing_eda.ipynb`](../notebooks/fakenews_preprocessing_eda.ipynb).
+[`training/README.md`](../training/README.md). Optional interactive QA and EDA
+over the generated artefacts lives in this folder, in
+[`fakenews_preprocessing_eda.ipynb`](fakenews_preprocessing_eda.ipynb).
 
 ## Contents
 

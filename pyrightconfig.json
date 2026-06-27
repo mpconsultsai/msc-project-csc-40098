@@ -6,7 +6,7 @@
   "reportMissingModuleSource": "none",
   "executionEnvironments": [
     { "root": "." },
-    { "root": "notebooks" },
+    { "root": "pipeline" },
     { "root": "training", "extraPaths": ["."] },
     { "root": "ui", "extraPaths": ["../training", "."] }
   ]
