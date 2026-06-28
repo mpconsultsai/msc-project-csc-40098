@@ -2,7 +2,11 @@
 
 Used by training_* notebooks. Copy this file to ``My Drive/training/`` with ``cohort_*.py``.
 
-Typical notebook pattern (two cells after ``pip install``)::
+Dependency versions are pinned centrally in :data:`PINNED_DEPENDENCIES` and installed
+via :func:`install_dependencies`, so every notebook resolves the same versions. ``torch``
+/ ``torchvision`` are left to Colab's preinstalled, CUDA-matched build.
+
+Typical notebook pattern (three cells)::
 
     # Cell A — identical in every Colab notebook (mount + copy training/)
     import shutil, sys
@@ -19,7 +23,11 @@ Typical notebook pattern (two cells after ``pip install``)::
     shutil.copytree(TRAINING_SRC, TRAINING)
     sys.path.insert(0, str(TRAINING / "src"))  # importable modules live in training/src/
 
-    # Cell B — per notebook (example: image + fusion)
+    # Cell B — pinned dependencies (groups vary per notebook; base is implicit)
+    from colab_setup import install_dependencies
+    install_dependencies(["text", "image"])  # e.g. fusion; tfidf uses install_dependencies()
+
+    # Cell C — per notebook (example: image + fusion)
     from colab_setup import require_cuda, setup_colab_project
     require_cuda()
     ctx = setup_colab_project(
@@ -34,6 +42,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -42,6 +51,29 @@ DEFAULT_DRIVE_MY = Path("/content/drive/MyDrive")
 DEFAULT_DRIVE_DATA = DEFAULT_DRIVE_MY / "data"
 LOCAL_ZIP_COPY = Path("/content/images_local.zip")
 MIN_JPG_COUNT = 1000
+
+#: Single source of truth for pinned training dependencies, shared by every
+#: ``training_*`` notebook. ``torch`` / ``torchvision`` are intentionally **absent**:
+#: Colab ships a build matched to its GPU/CUDA drivers, so they are used as-is
+#: (see :func:`require_cuda`); reinstalling them risks a CPU-only or mismatched wheel.
+#: Bump a version here and it updates consistently across all notebooks.
+PINNED_DEPENDENCIES: dict[str, str] = {
+    "scikit-learn": "scikit-learn==1.5.2",
+    "pandas": "pandas==2.2.2",
+    "Pillow": "Pillow==10.4.0",
+    "tqdm": "tqdm==4.66.5",
+    "transformers": "transformers==4.44.2",
+    "datasets": "datasets==2.21.0",
+    "accelerate": "accelerate==0.34.2",
+}
+
+#: Per-notebook dependency sets, composed from :data:`PINNED_DEPENDENCIES` keys.
+#: ``base`` is always installed; notebooks add ``text`` and/or ``image`` as needed.
+DEPENDENCY_GROUPS: dict[str, tuple[str, ...]] = {
+    "base": ("scikit-learn", "pandas"),
+    "text": ("transformers", "datasets", "accelerate"),
+    "image": ("Pillow", "tqdm"),
+}
 
 
 @dataclass
@@ -82,6 +114,86 @@ def require_cuda(*, strict: bool = True) -> bool:
             raise RuntimeError(msg)
         print("WARNING:", msg)
     return ok
+
+
+def report_versions(packages: Iterable[str] | None = None) -> dict[str, str]:
+    """Print and return the resolved versions of the key training dependencies.
+
+    Run after :func:`install_dependencies` so the exact versions used are captured
+    in the notebook output as a reproducibility record. ``torch`` and ``torchvision``
+    (provided by Colab) are always included.
+
+    Args:
+        packages: Distribution names to report. Defaults to all pinned dependencies.
+
+    Returns:
+        Mapping of distribution name to its resolved version (or ``"(not installed)"``).
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    names = list(packages) if packages is not None else list(PINNED_DEPENDENCIES)
+    for extra in ("torch", "torchvision"):
+        if extra not in names:
+            names.append(extra)
+
+    resolved: dict[str, str] = {}
+    print("Resolved dependency versions:")
+    for name in names:
+        try:
+            resolved[name] = version(name)
+        except PackageNotFoundError:
+            resolved[name] = "(not installed)"
+        print(f"  {name:>14}: {resolved[name]}")
+    return resolved
+
+
+def install_dependencies(
+    groups: Iterable[str] = (),
+    *,
+    quiet: bool = True,
+    report: bool = True,
+) -> dict[str, str]:
+    """Install the pinned training dependencies for the requested groups.
+
+    The ``base`` group (``scikit-learn``, ``pandas``) is always installed; pass extra
+    groups (``"text"``, ``"image"``) per notebook. ``torch`` / ``torchvision`` are not
+    installed here: Colab's preinstalled, CUDA-matched build is used as-is. All version
+    pins live in :data:`PINNED_DEPENDENCIES`, so every notebook stays in sync.
+
+    Args:
+        groups: Extra dependency groups beyond ``base`` (keys of :data:`DEPENDENCY_GROUPS`).
+        quiet: Pass ``-q`` to ``pip install``.
+        report: Print and return the resolved versions afterwards (reproducibility record).
+
+    Returns:
+        Mapping of distribution name to resolved version when ``report`` is true, else ``{}``.
+
+    Raises:
+        KeyError: If a requested group is not defined in :data:`DEPENDENCY_GROUPS`.
+        RuntimeError: If ``pip install`` exits non-zero.
+    """
+    keys: list[str] = []
+    for group in ("base", *groups):
+        if group not in DEPENDENCY_GROUPS:
+            raise KeyError(
+                f"Unknown dependency group {group!r}; known: {sorted(DEPENDENCY_GROUPS)}"
+            )
+        for key in DEPENDENCY_GROUPS[group]:
+            if key not in keys:
+                keys.append(key)
+
+    specs = [PINNED_DEPENDENCIES[key] for key in keys]
+    cmd = [sys.executable, "-m", "pip", "install"]
+    if quiet:
+        cmd.append("-q")
+    cmd.extend(specs)
+
+    print("Installing pinned dependencies:", " ".join(specs))
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError("pip install failed:\n" + (proc.stdout + proc.stderr)[-2000:])
+
+    return report_versions(keys) if report else {}
 
 
 def _tsv_candidates(name: str, drive_data: Path, drive_my: Path) -> list[Path]:

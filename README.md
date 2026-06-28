@@ -37,8 +37,10 @@ In the IDE, point the Python interpreter at `.venv/bin/python` (macOS/Linux) or
 | `pipeline/requirements.txt` | Data-preparation scripts and the EDA notebook (incl. the FakeNewsNet crawl, step `01`). |
 | `ui/requirements.txt` | The Gradio demo UI. |
 
-Training has no requirements file — each Colab notebook installs its own
-dependencies inline with `!pip install` (see [`training/README.md`](training/README.md)).
+Training has no requirements file — the Colab notebooks install version-pinned
+dependencies from a single source of truth (`colab_setup.PINNED_DEPENDENCIES`) via
+`install_dependencies([...])`, leaving `torch`/`torchvision` to Colab's preinstalled
+build (see [`training/README.md`](training/README.md)).
 
 ## Upstream repositories
 

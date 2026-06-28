@@ -82,7 +82,7 @@ of these files, re-upload it so Colab uses the latest version.
 
 ### Step 2.3 — Run the per-session setup cells
 
-Every notebook starts with the same two setup cells. Run them top to bottom at
+Every notebook starts with the same setup cells. Run them top to bottom at
 the start of each session (and again after any Colab restart).
 
 **Cell A — bootstrap (identical in every notebook).** Mounts Google Drive and
@@ -105,7 +105,19 @@ shutil.copytree(TRAINING_SRC, TRAINING)
 sys.path.insert(0, str(TRAINING / "src"))  # importable modules live in training/src/
 ```
 
-**Cell B — project setup (per notebook).** Copies the required TSVs (and images,
+**Cell B — pinned dependencies (per notebook).** Installs the version-pinned
+libraries from `colab_setup.PINNED_DEPENDENCIES` for the groups this notebook
+needs. The `base` group (`scikit-learn`, `pandas`) is always included; `torch`
+and `torchvision` are **not** installed here — Colab's preinstalled, CUDA-matched
+build is used as-is:
+
+```python
+from colab_setup import install_dependencies
+
+install_dependencies(["text", "image"])  # groups vary per notebook (see table)
+```
+
+**Cell C — project setup (per notebook).** Copies the required TSVs (and images,
 where needed) into the runtime. Call `require_cuda()` first **only** for the GPU
 notebooks:
 
@@ -122,12 +134,12 @@ PROJECT_ROOT = ctx.project_root
 
 Use these arguments per notebook:
 
-| Notebook | `tsv_names` | `need_images` | `require_cuda()` |
-|----------|-------------|---------------|------------------|
-| `training_text_tfidf.ipynb` | `["fake_news_final_text.tsv"]` | `False` | No (CPU) |
-| `training_text_distilbert.ipynb` | `["fake_news_final_text.tsv"]` | `False` | Yes |
-| `training_image_resnet.ipynb` | `["fake_news_final_image.tsv"]` | `True` | Yes |
-| `training_fusion.ipynb` | `["fake_news_final_text.tsv", "fake_news_final_image.tsv"]` | `True` | Yes |
+| Notebook | `install_dependencies(...)` | `tsv_names` | `need_images` | `require_cuda()` |
+|----------|------------------------------|-------------|---------------|------------------|
+| `training_text_tfidf.ipynb` | `()` (base) | `["fake_news_final_text.tsv"]` | `False` | No (CPU) |
+| `training_text_distilbert.ipynb` | `["text"]` | `["fake_news_final_text.tsv"]` | `False` | Yes |
+| `training_image_resnet.ipynb` | `["image"]` | `["fake_news_final_image.tsv"]` | `True` | Yes |
+| `training_fusion.ipynb` | `["text", "image"]` | `["fake_news_final_text.tsv", "fake_news_final_image.tsv"]` | `True` | Yes |
 
 ### Step 2.4 — Run the notebooks in order
 
@@ -163,7 +175,7 @@ helper modules in `training/src/`. The tables below list them by name.
 
 | Module | Purpose |
 |--------|---------|
-| `colab_setup.py` | Shared Colab setup: GPU check, Drive/TSV copying, image unzip, run syncing. |
+| `colab_setup.py` | Shared Colab setup: pinned dependency install (`install_dependencies` / `PINNED_DEPENDENCIES`), GPU check, Drive/TSV copying, image unzip, run syncing. |
 | `cohort_text.py`, `cohort_image.py`, `cohort_multimodal.py` | Shared data loading and `split_study`; `cohort_multimodal.py` joins modalities for fusion. |
 | `fusion_common.py`, `fusion_late.py`, `fusion_early.py`, `fusion_attention.py` | Shared fusion utilities and one module per fusion method. |
 
@@ -173,15 +185,19 @@ helper modules in `training/src/`. The tables below list them by name.
 |------|---------|
 | `pyrightconfig.json`, `typings/` | Editor type-checking support only (e.g. a stub for `google.colab`). They have no effect on training. |
 
-There is **no `requirements.txt` for training** — each notebook installs its own
-dependencies inline with `!pip install` in its setup cell, so the runtime
-environment is fully defined by the notebook itself.
+There is **no `requirements.txt` for training**. Instead, the dependency versions
+are pinned **once** in `colab_setup.PINNED_DEPENDENCIES` and installed per notebook
+via `install_dependencies([...])` (Cell B above), so every notebook resolves the
+same versions from a single source of truth. `torch` / `torchvision` are
+deliberately excluded and left to Colab's preinstalled, CUDA-matched build. Each
+install prints the resolved versions (`report_versions`) so the exact set used is
+captured in the notebook output.
 
 > **Optional — local editor environment.** Training does not need anything
 > installed locally. If you want type-checking and autocompletion while editing
 > the `.py` modules in your IDE, create a virtual environment and install the
-> same libraries the notebooks list in their `!pip install` setup cells (the
-> notebooks themselves still run in Colab):
+> same libraries listed in `colab_setup.PINNED_DEPENDENCIES` (the notebooks
+> themselves still run in Colab):
 >
 > ```bash
 > python3 -m venv .venv
