@@ -168,31 +168,36 @@ saves their results to `My Drive/runs/`. The fusion notebook calls
 run the fusion notebook before completing steps 2 and 3, it will report that the
 required checkpoints are missing.
 
-### Step 2.5 — Sharing the notebooks so someone else can run them
+### Step 2.5 — How to run and share for review
 
-The notebooks are easy to share; the **data** is the part that needs care (it is
-not redistributed publicly — see the licensing note in [Section 1](#1-what-you-need-before-you-start)).
-The key constraint: when anyone runs a notebook, Colab mounts **their own** Google
-Drive, so the helper code and data must be reachable from *their* `My Drive/`.
+The notebooks themselves are straightforward to distribute; the **dataset**
+requires care, as it is not redistributed publicly (see the data-access and
+licensing note in [Section 1](#1-what-you-need-before-you-start)). The governing
+constraint is that, when a notebook is executed, Colab mounts the **reviewer's own**
+Google Drive. The helper modules and data must therefore be reachable from *their*
+`My Drive/` at the paths the setup helper expects.
 
-**Recommended — Colab share + one shared Drive folder (for an assessor):**
+**Recommended approach — a single shared Google Drive folder.**
 
-1. Put everything in a single Google Drive folder using the [Step 2.1 layout](#step-21--one-time-prepare-google-drive):
-   the four notebooks, `training/src/`, the TSVs, and `images.zip`.
-2. **Share that folder** with the assessor's Google account (or use the notebook's
-   **Share** button, top-right in Colab).
-3. The assessor opens the folder in Drive and clicks **"Add shortcut to Drive"** so
-   it appears under their `My Drive/` at the expected paths.
-4. They open a notebook → **File → Save a copy in Drive** → pick the runtime
-   ([Step 2.2](#step-22--open-a-notebook-and-select-the-runtime)) → **Runtime → Run all**.
+1. Place all required assets in one Google Drive folder, following the
+   [Step 2.1 layout](#step-21--one-time-prepare-google-drive): the four notebooks,
+   `training/src/`, the cohort TSVs, and `images.zip`.
+2. Grant the reviewer access to that folder (or share an individual notebook using
+   Colab's **Share** control, top right).
+3. The reviewer opens the folder in Drive and selects **"Add shortcut to Drive"**,
+   so the contents appear under their `My Drive/` at the expected paths.
+4. The reviewer opens a notebook, selects **File → Save a copy in Drive**, chooses
+   the appropriate runtime ([Step 2.2](#step-22--open-a-notebook-and-select-the-runtime)),
+   and runs it via **Runtime → Run all**.
 
-Each notebook also opens itself with a **"How to run this notebook"** cell at the
-top, so the assessor has the steps in front of them.
+Each notebook also begins with a **"How to run this notebook"** cell, so the
+required steps are presented directly within the notebook.
 
-**Alternative — GitHub "Open in Colab" badges.** The badges in [Section 3](#3-notebooks-and-modules)
-load the latest committed notebook straight from GitHub. This is handy for
-distributing the *code* to many people, but it still requires the Drive assets
-above to run end to end (the badge only carries the notebook, not the data).
+**Alternative — GitHub "Open in Colab" links.** The badges in
+[Section 3](#3-notebooks-and-modules) open the latest committed version of a
+notebook directly from GitHub. This is convenient for distributing the **code** to
+a wider audience, but the Drive assets above are still required for end-to-end
+execution, as the link carries only the notebook and not the dataset.
 
 ## 3. Notebooks and modules
 
