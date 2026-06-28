@@ -164,12 +164,18 @@ helper modules in `training/src/`. The tables below list them by name.
 
 **Notebooks (open these in Colab):**
 
-| Notebook | Runtime | Purpose |
-|----------|---------|---------|
-| `training_text_tfidf.ipynb` | CPU | TF-IDF text baseline → `runs/text_tfidf_baseline/` (also writes `tfidf_pipeline.joblib` for the demo UI). |
-| `training_text_distilbert.ipynb` | GPU | DistilBERT text baseline → `runs/text_distilbert_baseline/`. |
-| `training_image_resnet.ipynb` | GPU | ResNet-18 image baseline → `runs/image_resnet18_baseline/`. |
-| `training_fusion.ipynb` | GPU | RQ2 / RQ3: late, early, and attention fusion plus a summary table. |
+| Notebook | Runtime | Open | Purpose |
+|----------|---------|------|---------|
+| `training_text_tfidf.ipynb` | CPU | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mpconsultsai/msc-project-csc-40098/blob/main/training/notebooks/training_text_tfidf.ipynb) | TF-IDF text baseline → `runs/text_tfidf_baseline/` (also writes `tfidf_pipeline.joblib` for the demo UI). |
+| `training_text_distilbert.ipynb` | GPU | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mpconsultsai/msc-project-csc-40098/blob/main/training/notebooks/training_text_distilbert.ipynb) | DistilBERT text baseline → `runs/text_distilbert_baseline/`. |
+| `training_image_resnet.ipynb` | GPU | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mpconsultsai/msc-project-csc-40098/blob/main/training/notebooks/training_image_resnet.ipynb) | ResNet-18 image baseline → `runs/image_resnet18_baseline/`. |
+| `training_fusion.ipynb` | GPU | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mpconsultsai/msc-project-csc-40098/blob/main/training/notebooks/training_fusion.ipynb) | RQ2 / RQ3: late, early, and attention fusion plus a summary table. |
+
+> The **Open in Colab** badges load the notebook straight from GitHub. They give
+> you the code only — before it runs end to end you still need the Drive assets
+> from [section 2](#2-how-to-run-training-in-google-colab) (`training/`, the TSVs,
+> and `images.zip` for the image/fusion notebooks). In Colab, use
+> **File → Save a copy in Drive** so your edits and outputs persist.
 
 **Supporting modules (in `training/src/`, synced to `My Drive/training/src/`; not run directly):**
 
