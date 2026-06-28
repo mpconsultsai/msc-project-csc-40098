@@ -34,6 +34,17 @@ separately in [`pipeline/README.md`](../pipeline/README.md).
 > The inputs are **frozen** at this stage. Do not edit anything under `pipeline/`
 > from the training notebooks; treat the TSVs as read-only.
 
+> **Data access and licensing.** The cohort data (the TSVs and the extracted
+> `images.zip`) is **not redistributed publicly**. FakeNewsNet is published as
+> article IDs/URLs and Fakeddit as Reddit metadata; the underlying article text and
+> images remain subject to the original publishers' and Reddit's terms, so this
+> project does **not** host them openly. For assessment or reproduction, the data is
+> shared **privately** with the assessor (e.g. a Google Drive link) and staged on
+> Drive as described in [section 2](#2-how-to-run-training-in-google-colab). The
+> notebooks themselves and the code are public; only the derived dataset is access
+> controlled. The pipeline that regenerates this data from the original sources is
+> documented in [`pipeline/README.md`](../pipeline/README.md).
+
 ## 2. How to run training in Google Colab
 
 The setup has two parts: a **one-time** upload of data and helper code to Google
@@ -156,6 +167,32 @@ saves their results to `My Drive/runs/`. The fusion notebook calls
 `sync_runs_from_drive()` during setup to pull those checkpoints back in. If you
 run the fusion notebook before completing steps 2 and 3, it will report that the
 required checkpoints are missing.
+
+### Step 2.5 — Sharing the notebooks so someone else can run them
+
+The notebooks are easy to share; the **data** is the part that needs care (it is
+not redistributed publicly — see the licensing note in [Section 1](#1-what-you-need-before-you-start)).
+The key constraint: when anyone runs a notebook, Colab mounts **their own** Google
+Drive, so the helper code and data must be reachable from *their* `My Drive/`.
+
+**Recommended — Colab share + one shared Drive folder (for an assessor):**
+
+1. Put everything in a single Google Drive folder using the [Step 2.1 layout](#step-21--one-time-prepare-google-drive):
+   the four notebooks, `training/src/`, the TSVs, and `images.zip`.
+2. **Share that folder** with the assessor's Google account (or use the notebook's
+   **Share** button, top-right in Colab).
+3. The assessor opens the folder in Drive and clicks **"Add shortcut to Drive"** so
+   it appears under their `My Drive/` at the expected paths.
+4. They open a notebook → **File → Save a copy in Drive** → pick the runtime
+   ([Step 2.2](#step-22--open-a-notebook-and-select-the-runtime)) → **Runtime → Run all**.
+
+Each notebook also opens itself with a **"How to run this notebook"** cell at the
+top, so the assessor has the steps in front of them.
+
+**Alternative — GitHub "Open in Colab" badges.** The badges in [Section 3](#3-notebooks-and-modules)
+load the latest committed notebook straight from GitHub. This is handy for
+distributing the *code* to many people, but it still requires the Drive assets
+above to run end to end (the badge only carries the notebook, not the data).
 
 ## 3. Notebooks and modules
 
