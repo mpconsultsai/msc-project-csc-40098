@@ -102,6 +102,13 @@ notebooks create `My Drive/runs/` automatically when training finishes.
 > TSV or `images.zip` missing → check they are in `My Drive/data/`, not only on your Mac;
 > wrong account → re-run Cell A and pick the correct Google account.
 
+> **GitHub won't render a notebook** (`metadata.widgets` / missing `state`): Colab
+> sometimes adds broken widget metadata after training progress bars. Before pushing
+> a Colab-exported `.ipynb`, run:
+> `python training/scripts/clean_notebook_for_github.py training/notebooks/training_text_distilbert.ipynb`
+> Or in Colab: **Edit → Clear all outputs**, then download and commit. Keep training
+> outputs in Drive/`runs/`, not in the GitHub notebook file.
+
 ### Step 2.2 — Open a notebook and select the runtime
 
 1. Open the desired notebook (see the [table in Section 3](#3-notebooks-and-modules)) in Google Colab.
