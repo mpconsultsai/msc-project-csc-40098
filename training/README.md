@@ -66,7 +66,9 @@ Colab cannot see files on your Mac. Upload them **once** to
 
 - `fake_news_final_text.tsv`
 - `fake_news_final_image.tsv`
-- `images.zip` — for image and fusion notebooks only (~1.1 GB). If you do not have it yet:
+- `images.zip` — for image and fusion notebooks only (~1.1 GB). This is **not**
+  produced by the pipeline automatically; zip the downloaded images folder
+  `data/processed/images/` (created by pipeline step **06**), then upload the zip:
 
 ```bash
 cd "/path/to/MSC Project/data"
