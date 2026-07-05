@@ -72,8 +72,14 @@ Colab cannot see files on your Mac. Upload them **once** to
 
 ```bash
 cd "/path/to/MSC Project/data"
-zip -r images.zip processed/images/
+zip -r images.zip processed/images/ -x "*.log"
 ```
+
+> **Image payload QC.** A few publisher CDN files were saved as `.jpg` but contained
+> AVIF or JPEG2000 bytes. These passed Mac pipeline validation but broke Colab
+> training. Normalise to real JPEG before zipping (see project decision log). The
+> image and fusion notebooks call `verify_jpeg_payloads()` after load to catch
+> stale zips early.
 
 **3. Upload into `My Drive/training/src/`** — all `.py` files from this repo's
 `training/src/` folder (including `colab_setup.py`).
@@ -249,7 +255,7 @@ helper modules in `training/src/`. The tables below list them by name.
 | Module | Purpose |
 |--------|---------|
 | `colab_setup.py` | Shared Colab setup: pinned dependency install (`install_dependencies` / `PINNED_DEPENDENCIES`), GPU check, Drive/TSV copying, image unzip, run syncing. |
-| `cohort_text.py`, `cohort_image.py`, `cohort_multimodal.py` | Shared data loading and `split_study`; `cohort_multimodal.py` joins modalities for fusion. |
+| `cohort_text.py`, `cohort_image.py`, `cohort_multimodal.py` | Shared data loading and `split_study`; `cohort_multimodal.py` joins modalities for fusion. `cohort_image.verify_jpeg_payloads` fails fast if any cohort `.jpg` is not JPEG on disk (guards against extension/payload mismatches before training). |
 | `fusion_common.py`, `fusion_late.py`, `fusion_early.py`, `fusion_attention.py` | Shared fusion utilities and one module per fusion method. |
 
 **Repository-only files (not uploaded to Drive):**

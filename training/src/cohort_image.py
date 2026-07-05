@@ -80,6 +80,81 @@ def verify_image_files(
     return out, stats
 
 
+JPEG_MAGIC = b"\xff\xd8"
+
+
+def verify_jpeg_payloads(
+    df: pd.DataFrame,
+    project_root: Path,
+    *,
+    path_column: str = "cohort_image_local_path",
+    max_report: int = 10,
+) -> dict[str, int]:
+    """Fail fast when a ``.jpg`` cohort path is not JPEG on disk.
+
+    Catches extension/payload mismatches (e.g. AVIF or JPEG2000 bytes saved with a
+    ``.jpg`` name) that can pass Mac pipeline QC but break Colab Pillow mid-training.
+
+    Args:
+        df: Frame with image paths (typically the image or multimodal cohort).
+        project_root: Root the relative paths are resolved against.
+        path_column: Column holding repo-relative image paths.
+        max_report: Maximum mislabelled paths to include in the error message.
+
+    Returns:
+        ``rows_checked`` (unique existing ``.jpg`` paths scanned) and ``rows_ok``.
+
+    Raises:
+        ValueError: If any path has a non-JPEG payload or cannot be decoded.
+    """
+    rel_paths = sorted(
+        {
+            str(p)
+            for p in df[path_column].astype(str)
+            if str(p).lower().endswith((".jpg", ".jpeg"))
+        }
+    )
+    bad: list[tuple[str, str]] = []
+    checked = 0
+
+    for rel in rel_paths:
+        path = project_root / rel
+        if not path.is_file():
+            continue
+        checked += 1
+        try:
+            header = path.read_bytes()[:2]
+        except OSError as exc:
+            bad.append((rel, f"unreadable: {exc}"))
+            continue
+        if header == JPEG_MAGIC:
+            continue
+        detail = f"non-JPEG header {header.hex()}"
+        try:
+            from PIL import Image
+
+            with Image.open(path) as im:
+                detail = f"PIL format={im.format or 'unknown'}, header={header.hex()}"
+        except Exception as exc:
+            detail = f"undecodable ({type(exc).__name__}), header={header.hex()}"
+        bad.append((rel, detail))
+
+    if bad:
+        sample = "\n".join(f"  {rel}: {detail}" for rel, detail in bad[:max_report])
+        extra = ""
+        if len(bad) > max_report:
+            extra = f"\n  ... and {len(bad) - max_report} more"
+        raise ValueError(
+            f"{len(bad)} cohort image(s) have a .jpg name but non-JPEG payload "
+            f"(can cause UnidentifiedImageError during training).\n"
+            f"{sample}{extra}\n"
+            "Re-normalise images.zip (see training README / decision log) and "
+            "re-run the Setup cell."
+        )
+
+    return {"rows_checked": checked, "rows_ok": checked}
+
+
 def load_image_cohort(
     project_root: Path | None = None,
     *,
