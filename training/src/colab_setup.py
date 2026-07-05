@@ -60,7 +60,7 @@ MIN_JPG_COUNT = 1000
 PINNED_DEPENDENCIES: dict[str, str] = {
     "scikit-learn": "scikit-learn==1.5.2",
     "pandas": "pandas==2.2.2",
-    "Pillow": "Pillow==10.4.0",
+    "Pillow": "Pillow==11.1.0",
     "tqdm": "tqdm==4.66.5",
     "transformers": "transformers==4.44.2",
     "datasets": "datasets==2.21.0",
