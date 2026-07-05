@@ -61,6 +61,7 @@ PINNED_DEPENDENCIES: dict[str, str] = {
     "scikit-learn": "scikit-learn==1.5.2",
     "pandas": "pandas==2.2.2",
     "Pillow": "Pillow==11.1.0",
+    "pillow-heif": "pillow-heif==0.21.0",
     "tqdm": "tqdm==4.66.5",
     "transformers": "transformers==4.44.2",
     "datasets": "datasets==2.21.0",
@@ -72,7 +73,7 @@ PINNED_DEPENDENCIES: dict[str, str] = {
 DEPENDENCY_GROUPS: dict[str, tuple[str, ...]] = {
     "base": ("scikit-learn", "pandas"),
     "text": ("transformers", "datasets", "accelerate"),
-    "image": ("Pillow", "tqdm"),
+    "image": ("Pillow", "pillow-heif", "tqdm"),
 }
 
 
@@ -114,6 +115,16 @@ def require_cuda(*, strict: bool = True) -> bool:
             raise RuntimeError(msg)
         print("WARNING:", msg)
     return ok
+
+
+def register_image_codecs() -> None:
+    """Register AVIF/HEIF with Pillow (one cohort file is AVIF with a ``.jpg`` name)."""
+    try:
+        import pillow_heif
+
+        pillow_heif.register_heif_opener()
+    except ImportError:
+        pass
 
 
 def report_versions(packages: Iterable[str] | None = None) -> dict[str, str]:
@@ -192,6 +203,9 @@ def install_dependencies(
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         raise RuntimeError("pip install failed:\n" + (proc.stdout + proc.stderr)[-2000:])
+
+    if "image" in tuple(groups):
+        register_image_codecs()
 
     return report_versions(keys) if report else {}
 
@@ -418,6 +432,7 @@ def setup_colab_project(
     image_count = 0
     images_dir = project_root / "data/processed/images"
     if need_images:
+        register_image_codecs()
         image_count = ensure_images(project_root, drive_data=drive_data, drive_my=drive_my)
     elif images_dir.is_dir():
         image_count = len(list(images_dir.glob("*.jpg")))
