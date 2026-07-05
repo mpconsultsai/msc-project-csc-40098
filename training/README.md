@@ -6,8 +6,8 @@ multimodal fusion methods (early, late, and attention-based) used to answer the
 research questions.
 
 **All training runs in Google Colab.** TF-IDF runs on a CPU runtime; the
-DistilBERT, image, and fusion notebooks need a GPU runtime (a free T4 is
-sufficient). Data and trained artefacts live in Google Drive so they persist
+DistilBERT, image, and fusion notebooks require **CUDA GPU acceleration**
+(reported runs: Google Colab, NVIDIA T4). Data and trained artefacts live in Google Drive so they persist
 between sessions.
 
 The data-preparation steps that produce the inputs for this stage are described
@@ -215,7 +215,7 @@ figures from the locked benchmark runs (full cohort, seed 42):
 | `training_text_tfidf.ipynb` | CPU | ~1–2 min |
 | `training_text_distilbert.ipynb` | GPU | ~10–15 min |
 | `training_image_resnet.ipynb` | GPU | ~15 min train (+ few min first unzip) |
-| `training_fusion.ipynb` (Steps 2–4) | GPU | ~20–40 min each (encoder passes dominate) |
+| `training_fusion.ipynb` (Steps 2–4) | GPU | ~25–35 min total (~7 min per fusion step) |
 
 After **Runtime → Restart**, run cells **from the top** in order — later cells
 depend on `PROJECT_ROOT`, `train_df`, `val_df`, and fitted models from earlier
