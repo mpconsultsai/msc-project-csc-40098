@@ -39,7 +39,7 @@ separately in [`pipeline/README.md`](../pipeline/README.md).
 > article IDs/URLs and Fakeddit as Reddit metadata; the underlying article text and
 > images remain subject to the original publishers' and Reddit's terms, so this
 > project does **not** host them openly. For assessment or reproduction, the data is
-> shared **privately** with the assessor (e.g. a Google Drive link) and staged on
+> shared **privately** only (e.g. a Google Drive link) and staged on
 > Drive as described in [section 2](#2-how-to-run-training-in-google-colab). The
 > notebooks themselves and the code are public; only the derived dataset is access
 > controlled. The pipeline that regenerates this data from the original sources is
@@ -52,11 +52,31 @@ Drive, and a short **per-session** setup that you run at the top of each
 notebook. All notebooks share the same `colab_setup.py` helper, so this setup is
 identical across notebooks.
 
-### Step 2.1 — One-time: prepare Google Drive
+### Step 2.1 — One-time: upload files to Google Drive
 
-Upload the project files to your Google Drive using exactly this layout. The
-folder names and the `data/` and `training/` structure must match, because the
-setup helper looks for these specific paths.
+Colab cannot see files on your Mac. Upload them **once** to
+[Google Drive](https://drive.google.com) (same Google account you use in Colab).
+
+**1. Create folders** in My Drive:
+
+- `data`
+- `training/src`
+
+**2. Upload into `My Drive/data/`** (from your Mac project's `data/` folder):
+
+- `fake_news_final_text.tsv`
+- `fake_news_final_image.tsv`
+- `images.zip` — for image and fusion notebooks only (~1.1 GB). If you do not have it yet:
+
+```bash
+cd "/path/to/MSC Project/data"
+zip -r images.zip processed/images/
+```
+
+**3. Upload into `My Drive/training/src/`** — all `.py` files from this repo's
+`training/src/` folder (including `colab_setup.py`).
+
+**4. The folder structure should be as follows:**
 
 ```
 My Drive/
@@ -66,23 +86,19 @@ My Drive/
 │   └── images.zip
 └── training/
     └── src/
-        ├── colab_setup.py
-        ├── cohort_text.py
-        ├── cohort_image.py
-        ├── cohort_multimodal.py
-        ├── fusion_common.py
-        ├── fusion_late.py
-        ├── fusion_early.py
-        └── fusion_attention.py
+        └── *.py
 ```
 
-Copy the `src/` folder (all the `.py` modules) from this `training/` directory
-into `My Drive/training/`, keeping the `src/` subfolder. Whenever you change one
-of these files, re-upload it so Colab uses the latest version.
+You do **not** need to upload the notebooks — open them from the Colab badges in
+[Section 3](#3-notebooks-and-modules). You do **not** need to create `runs/` —
+notebooks create `My Drive/runs/` automatically when training finishes.
 
-> A `My Drive/runs/` folder is **created automatically** the first time you run a
-> notebook — you do not need to create it yourself. Trained checkpoints and
-> metrics are saved there so they persist between sessions.
+> **Tip:** Wait until large uploads show 100% in Drive before opening Colab.
+> If you edit `training/src/` locally, re-upload the changed file(s).
+
+> **If Colab errors:** `training/src/` missing → upload the `.py` files;
+> TSV or `images.zip` missing → check they are in `My Drive/data/`, not only on your Mac;
+> wrong account → re-run Cell A and pick the correct Google account.
 
 ### Step 2.2 — Open a notebook and select the runtime
 
