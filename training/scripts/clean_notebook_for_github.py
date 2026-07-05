@@ -35,6 +35,10 @@ def clean_notebook(path: Path) -> bool:
         if "widgets" in cell_meta:
             del cell_meta["widgets"]
             changed = True
+        colab_meta = cell_meta.get("colab")
+        if isinstance(colab_meta, dict) and "referenced_widgets" in colab_meta:
+            del colab_meta["referenced_widgets"]
+            changed = True
 
         if cell.get("cell_type") != "code":
             continue
