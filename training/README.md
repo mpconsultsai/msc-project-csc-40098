@@ -199,6 +199,22 @@ saves their results to `My Drive/runs/`. The fusion notebook calls
 run the fusion notebook before completing steps 2 and 3, it will report that the
 required checkpoints are missing.
 
+### Step 2.4a — Typical runtimes (Google Colab T4)
+
+Wall-clock times vary with queue load and first-time image unzip. Indicative
+figures from the locked benchmark runs (full cohort, seed 42):
+
+| Notebook | Runtime | Typical duration |
+|----------|---------|------------------|
+| `training_text_tfidf.ipynb` | CPU | ~1–2 min |
+| `training_text_distilbert.ipynb` | GPU | ~10–15 min |
+| `training_image_resnet.ipynb` | GPU | ~15 min train (+ few min first unzip) |
+| `training_fusion.ipynb` (Steps 2–4) | GPU | ~20–40 min each (encoder passes dominate) |
+
+After **Runtime → Restart**, run cells **from the top** in order — later cells
+depend on `PROJECT_ROOT`, `train_df`, `val_df`, and fitted models from earlier
+cells.
+
 ### Step 2.5 — How to run and share for review
 
 The notebooks themselves are straightforward to distribute; the **dataset**
@@ -298,10 +314,12 @@ All results are written under `runs/`, with one subfolder per experiment:
 | `fusion_early_concat/` | `training_fusion.ipynb` (early) |
 | `fusion_attention/` | `training_fusion.ipynb` (attention) |
 
-Each fusion run writes `metrics.json` (macro-F1, per-class F1/recall, ROC-AUC,
-average precision), `predictions_val.tsv`, `confusion_matrix.png`,
-`roc_pr_curves.png` (ROC and precision–recall, with recall on the x-axis), and,
-where applicable, a model checkpoint.
+Each run writes `metrics.json` (macro-F1, accuracy, ROC-AUC, average precision,
+and per-class `recall_real` / `recall_fake` where applicable), `predictions_val.tsv`,
+and plot PNGs where the notebook generates them. Unimodal runs also record
+`f1_real` / `f1_fake`. Fusion runs save combiner/head checkpoints. The fusion
+notebook Step 5 table reads recall from `metrics.json`, or derives it from
+`predictions_val.tsv` for older unimodal runs.
 
 ---
 
