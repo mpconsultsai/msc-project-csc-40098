@@ -54,7 +54,7 @@ identical across notebooks.
 
 ### Step 2.1 — One-time: upload files to Google Drive
 
-Colab cannot see files on your Mac. Upload them **once** to
+Colab cannot see files on your local machine. Upload them **once** to
 [Google Drive](https://drive.google.com) (same Google account you use in Colab).
 
 **1. Create folders** in My Drive:
@@ -62,7 +62,7 @@ Colab cannot see files on your Mac. Upload them **once** to
 - `data`
 - `training/src`
 
-**2. Upload into `My Drive/data/`** (from your Mac project's `data/` folder):
+**2. Upload into `My Drive/data/`** (from your local project's `data/` folder):
 
 - `fake_news_final_text.tsv`
 - `fake_news_final_image.tsv`
@@ -76,7 +76,7 @@ zip -r images.zip processed/images/ -x "*.log"
 ```
 
 > **Image payload QC.** A few publisher CDN files were saved as `.jpg` but contained
-> AVIF or JPEG2000 bytes. These passed Mac pipeline validation but broke Colab
+> AVIF or JPEG2000 bytes. These passed local pipeline validation but broke Colab
 > training. Normalise to real JPEG before zipping (see project decision log). The
 > image and fusion notebooks call `verify_jpeg_payloads()` after load to catch
 > stale zips early.
@@ -105,15 +105,21 @@ notebooks create `My Drive/runs/` automatically when training finishes.
 > If you edit `training/src/` locally, re-upload the changed file(s).
 
 > **If Colab errors:** `training/src/` missing → upload the `.py` files;
-> TSV or `images.zip` missing → check they are in `My Drive/data/`, not only on your Mac;
+> TSV or `images.zip` missing → check they are in `My Drive/data/`, not only on your local machine;
 > wrong account → re-run Cell A and pick the correct Google account.
 
 > **GitHub won't render a notebook** (`metadata.widgets` / missing `state`): Colab
-> sometimes adds broken widget metadata after training progress bars. Before pushing
-> a Colab-exported `.ipynb`, run:
-> `python training/scripts/clean_notebook_for_github.py training/notebooks/training_text_distilbert.ipynb`
-> Or in Colab: **Edit → Clear all outputs**, then download and commit. Keep training
-> outputs in Drive/`runs/`, not in the GitHub notebook file.
+> sometimes adds broken widget metadata after training progress bars (tqdm,
+> DistilBERT `Trainer`, etc.). **After a full Colab run**, before committing
+> notebooks to GitHub:
+>
+> ```bash
+> python training/scripts/clean_notebook_for_github.py training/notebooks/*.ipynb
+> ```
+>
+> Or in Colab: **Edit → Clear all outputs**, then download and commit. Keep
+> authoritative metrics in `My Drive/runs/` (`metrics.json`, plots) — the GitHub
+> notebooks are a **code + reproducibility record**, not the primary results store.
 
 ### Step 2.2 — Open a notebook and select the runtime
 

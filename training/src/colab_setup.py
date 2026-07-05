@@ -269,7 +269,7 @@ def sync_training_helpers(
             from google.colab import files
         except ImportError:
             raise FileNotFoundError(f"Copy training/ to {src}") from None
-        print("Upload cohort_*.py and colab_setup.py from Mac training/:")
+        print("Upload cohort_*.py and colab_setup.py from your local training/ folder:")
         uploaded = files.upload()
         dst.mkdir(parents=True, exist_ok=True)
         for name, data in uploaded.items():
@@ -285,7 +285,7 @@ def _check_zip_file(path: Path) -> None:
     if size_mb < 800:
         raise ValueError(
             f"{path.name} is only {size_mb:.1f} MB — expect ~1.1–1.3 GB. "
-            "Re-upload the full zip from your Mac."
+            "Re-upload the full zip from your local machine."
         )
     if head[:2] != b"PK":
         raise ValueError(f"{path.name} is not a ZIP (got header {head!r}).")

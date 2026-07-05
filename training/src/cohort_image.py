@@ -93,7 +93,7 @@ def verify_jpeg_payloads(
     """Fail fast when a ``.jpg`` cohort path is not JPEG on disk.
 
     Catches extension/payload mismatches (e.g. AVIF or JPEG2000 bytes saved with a
-    ``.jpg`` name) that can pass Mac pipeline QC but break Colab Pillow mid-training.
+    ``.jpg`` name) that can pass local pipeline QC but break Colab Pillow mid-training.
 
     Args:
         df: Frame with image paths (typically the image or multimodal cohort).
