@@ -24,6 +24,11 @@ from fusion_common import (
     RANDOM_SEED,
     evaluate_predictions,
 )
+from fusion_common import (  # noqa: F401 — re-exported for notebooks
+    IMAGE_RUN_ID,
+    TEXT_RUN_ID,
+    require_unimodal_artifacts,
+)
 
 FUSION_RUN_ID = FUSION_LATE_RUN_ID
 evaluate_scores = evaluate_predictions
