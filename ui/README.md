@@ -2,15 +2,13 @@
 
 Local demo that scores a single news-like social post (text and/or image) as likely fake or likely real using the project’s trained models.
 
-**Supported way to run:** on your own machine, following the steps below. There is no stable public demo URL.
-
 ---
 
 ## Prerequisites
 
 | Need | Notes |
 |------|--------|
-| This repository | Cloned or downloaded; work from the **project root**. |
+| This repository | `git clone https://github.com/mpconsultsai/msc-project-csc-40098.git` then work from that folder. |
 | Python 3 | With a virtual environment at `.venv` (see root [README](../README.md)). |
 | Model files | Copy into `ui/models/` (not in git — see [models/README.md](models/README.md)). |
 | Cohort data (optional) | Needed only for **Phase 1** Examples: `data/fake_news_final_*.tsv` and cohort images under `data/`. **Phase 2** Examples use files under `ui/assets/examples/`. |
@@ -21,11 +19,14 @@ If a model’s files are missing, the app still starts and shows an **Artefacts 
 
 ## Run locally (step by step)
 
-### 1. Open a terminal at the project root
+### 1. Clone the repository and open a terminal there
 
 ```bash
-cd "/path/to/MSC Project"
+git clone https://github.com/mpconsultsai/msc-project-csc-40098.git
+cd msc-project-csc-40098
 ```
+
+(Skip the clone if you already have the project; still `cd` into its root.)
 
 ### 2. Create / activate the virtual environment (if needed)
 
