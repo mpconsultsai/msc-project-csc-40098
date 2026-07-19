@@ -1,4 +1,4 @@
-# Gradio proof-of-concept UI
+# Gradio PoC UI
 
 Local demo that scores a single news-like social post (text and/or image) as likely fake or likely real using the project’s trained models.
 
