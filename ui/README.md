@@ -1,93 +1,96 @@
-# Demo UI
+# Gradio proof-of-concept UI
 
-This directory contains the project's **proof-of-concept demo UI**: a Gradio app
-that takes a single social-media post (text and/or image) and returns a fake/real
-verdict using the trained models. It runs locally and loads the checkpoints
-produced by the training stage.
+Local demo that scores a single news-like social post (text and/or image) as likely fake or likely real using the project’s trained models.
 
-The models it serves are produced in [`training/README.md`](../training/README.md);
-the worked examples are drawn from the pipeline's frozen cohort exports.
-
-## Contents
-
-- [What you need before you start](#1-what-you-need-before-you-start)
-- [How to run locally](#2-how-to-run-locally)
-- [Using the app](#3-using-the-app)
-- [How inference is wired](#4-how-inference-is-wired)
-- [Deployment notes](#5-deployment-notes)
+**Supported way to run:** on your own machine, following the steps below. There is no stable public demo URL.
 
 ---
 
-## 1. What you need before you start
+## Prerequisites
 
-| Requirement | Detail |
-|-------------|--------|
-| **Python environment** | The project-root `.venv` with `ui/requirements.txt` installed (see [Step 2.1](#step-21--install-dependencies)). |
-| **Trained artefacts** | Run folders copied from Colab/Drive into `ui/models/`. See [`ui/models/README.md`](models/README.md) and [Section 4](#4-how-inference-is-wired). |
-| **Cohort data (optional)** | `data/fake_news_final_*.tsv` and `data/processed/images/`, used only by the *Load example* buttons. |
+| Need | Notes |
+|------|--------|
+| This repository | Cloned or downloaded; work from the **project root**. |
+| Python 3 | With a virtual environment at `.venv` (see root [README](../README.md)). |
+| Model files | Copy into `ui/models/` (not in git — see [models/README.md](models/README.md)). |
+| Cohort data (optional) | Needed only for **Phase 1** Examples: `data/fake_news_final_*.tsv` and cohort images under `data/`. **Phase 2** Examples use files under `ui/assets/examples/`. |
 
-> Run commands from the **project root**. Checkpoints live under `ui/models/`; cohort data (for examples) under `data/`. If a model's artefacts are missing, the app still launches and shows an "Artefacts missing" message instead of a prediction.
+If a model’s files are missing, the app still starts and shows an **Artefacts missing** message instead of a prediction.
 
-## 2. How to run locally
+---
 
-### Step 2.1 — Install dependencies
+## Run locally (step by step)
 
-This assumes the project-root `.venv` described in the [main README](../README.md).
+### 1. Open a terminal at the project root
 
 ```bash
 cd "/path/to/MSC Project"
-.venv/bin/pip install -r ui/requirements.txt
 ```
 
-### Step 2.2 — Add the trained artefacts
+### 2. Create / activate the virtual environment (if needed)
 
-Copy the checkpoint files from Colab `My Drive/runs/` into `ui/models/` (flat layout — see [`ui/models/README.md`](models/README.md)). **`model.safetensors` is not in git** (GitHub size limit); copy it from Drive after clone.
+```bash
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+```
 
-### Step 2.3 — Launch the app
+### 3. Install UI dependencies
+
+```bash
+pip install -r ui/requirements.txt
+```
+
+(Or: `.venv/bin/pip install -r ui/requirements.txt` without activating.)
+
+### 4. Copy the trained model files
+
+Place checkpoints in `ui/models/` as listed in [models/README.md](models/README.md). Typical source: Colab `My Drive/runs/`.
+
+At minimum for a full demo you need DistilBERT’s `model/model.safetensors` (~255 MB) plus the other listed files. Without DistilBERT weights, TF–IDF and ResNet can still run if their files are present; fusion models will not.
+
+### 5. Start the app
 
 ```bash
 .venv/bin/python ui/gradio-ui.py
 ```
 
-Open `http://127.0.0.1:7860`.
+### 6. Open the UI in a browser
 
-## 3. Using the app
+Go to [http://127.0.0.1:7860](http://127.0.0.1:7860).
 
-- The app uses Gradio's **Origin** theme (fixed; no theme switcher).
-- Inputs start **empty**. Use the **Examples** tabs (**Phase 1** / **Phase 2**) to load a built-in case; source details appear under **Result**. Phase 2 stills under `ui/assets/examples/` are third-party (see that folder’s README).
-- For image/fusion models open the **Image** tab to **upload** an image or paste an **image URL** and click **Load** (or Enter). The preview uses a fixed height. Direct file links and X photo pages are supported. Upload wins if both upload and URL are set at Analyse time.
-- Models are **lazy-loaded** once per app session and cached in memory, so the first prediction for a model is slower.
+Stop the server with `Ctrl+C` in the terminal.
 
-## 4. How inference is wired
+---
 
-A prediction flows through the app as follows:
+## Using the app (short guide)
 
-```
-Gradio (gradio-ui.py)
-    → analyse()              # validates input, checks artefacts, times the call
-    → run_inference()
-    → ui/inference.py  InferenceEngine.predict()
-    → loads from ui/models/  (flat checkpoint files)
-```
+1. Choose a **Model** (text-only, image-only, or fusion). Only the input tabs that model needs are shown.
+2. Optionally open **Examples** → **Phase 1** or **Phase 2** and click a button to load a prepared case (source note appears under **Result**). Or type/paste your own post text and/or upload an image.
+3. On the **Image** tab you can also paste an image URL and click **Load** (direct image links and X photo pages).
+4. Click **Analyse** and read the verdict, fake-probability, and latency under **Result**.
+5. **Reset** clears inputs and returns to the default model.
 
-| UI model key | File(s) in `ui/models/` | Inference path |
-|--------------|--------------------------|----------------|
-| `text_tfidf` | `tfidf_pipeline.joblib` | sklearn `predict_proba` |
-| `text_distilbert` | `model/` | Hugging Face tokenizer + model |
-| `image_resnet18` | `resnet18_state.pt` | torchvision ResNet-18 |
-| `fusion_late` | `late_fusion_combiner.pkl` + unimodal files | DistilBERT + ResNet scores → logistic combiner |
-| `fusion_early` | `early_fusion_head.pt` + unimodal files | Frozen encoders → concat → linear head |
-| `fusion_attention` | `attention_fusion_head.pt` + unimodal files | Frozen encoders → attention head |
+The first prediction for each model in a session is slower (lazy load); later calls are usually faster.
 
-`ui/inference.py` reuses `training/src/fusion_*.py` and `fusion_common.py`, so the
-prediction logic matches the fusion notebook, adapted for a single text + PIL
-image. When the artefacts for the selected model are present, the app returns a
-label, a fake-probability score, and the inference latency.
+---
 
-## 5. Deployment notes
+## Which files each model uses
 
-**Local launch is the supported path** (Section 2 above). That is what `ui/README.md` documents end-to-end: install → copy `ui/models/` → run → open `http://127.0.0.1:7860`.
+| Model in the UI | Files under `ui/models/` |
+|-----------------|---------------------------|
+| TF–IDF + logistic | `tfidf_pipeline.joblib` |
+| DistilBERT | `model/` (including `model.safetensors`) |
+| ResNet-18 | `resnet18_state.pt` |
+| Late fusion | `late_fusion_combiner.pkl` + DistilBERT `model/` + `resnet18_state.pt` |
+| Early fusion | `early_fusion_head.pt` + DistilBERT `model/` + `resnet18_state.pt` |
+| Attention fusion | `attention_fusion_head.pt` + DistilBERT `model/` + `resnet18_state.pt` |
 
-Gradio `--share` can emit a temporary `https://….gradio.live` URL (often ~1 week) while the process stays running on the host machine. It is **not** recommended as the primary way to use or mark the PoC: links expire, depend on your laptop staying online, and are omitted from the step-by-step instructions for that reason.
+Inference code (`ui/inference.py`) reuses the same fusion helpers as training, so scores match the locked experiments when these artefacts are present.
 
-Persistent public hosting (e.g. Hugging Face Gradio Space) remains future work: free-tier Gradio Spaces appear recently restricted or paid on many accounts ([HF forum reports](https://discuss.huggingface.co/t/gradio-sdk-now-marked-as-paid-when-creating-a-new-space/177619)), and DistilBERT weights (~255 MB) cannot live in this GitHub repo.
+---
+
+## Sharing and hosting (not required)
+
+Do **not** rely on temporary Gradio `--share` links (`*.gradio.live`) for marking or hand-over: they expire and need the host machine left running. Persistent cloud hosting (e.g. Hugging Face Spaces) is out of scope for this deliverable.
+
+For assessment, run locally as above, or use a short screen recording of that local session.
