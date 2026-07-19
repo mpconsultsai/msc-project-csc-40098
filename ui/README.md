@@ -91,6 +91,4 @@ Inference code (`ui/inference.py`) reuses the same fusion helpers as training, s
 
 ## Sharing and hosting (not required)
 
-Do **not** rely on temporary Gradio `--share` links (`*.gradio.live`) for marking or hand-over: they expire and need the host machine left running. Persistent cloud hosting (e.g. Hugging Face Spaces) is out of scope for this deliverable.
-
-For assessment, run locally as above, or use a short screen recording of that local session.
+Do **not** rely on temporary Gradio `--share` links (`*.gradio.live`): they expire and need the host machine left running. Persistent cloud hosting (e.g. Hugging Face Spaces) is out of scope for this deliverable.
