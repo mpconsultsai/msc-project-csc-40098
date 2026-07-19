@@ -14,7 +14,7 @@ the worked examples are drawn from the pipeline's frozen cohort exports.
 - [How to run locally](#2-how-to-run-locally)
 - [Using the app](#3-using-the-app)
 - [How inference is wired](#4-how-inference-is-wired)
-- [Deployment options](#5-deployment-options)
+- [Deployment notes](#5-deployment-notes)
 
 ---
 
@@ -84,21 +84,10 @@ prediction logic matches the fusion notebook, adapted for a single text + PIL
 image. When the artefacts for the selected model are present, the app returns a
 label, a fake-probability score, and the inference latency.
 
-## 5. Deployment options
+## 5. Deployment notes
 
-### 1. Temporary public link (fastest)
+**Local launch is the supported path** (Section 2 above). That is what `ui/README.md` documents end-to-end: install → copy `ui/models/` → run → open `http://127.0.0.1:7860`.
 
-Gradio hosts a temporary public tunnel (typically about **one week**):
+Gradio `--share` can emit a temporary `https://….gradio.live` URL (often ~1 week) while the process stays running on the host machine. It is **not** recommended as the primary way to use or mark the PoC: links expire, depend on your laptop staying online, and are omitted from the step-by-step instructions for that reason.
 
-```bash
-.venv/bin/python ui/gradio-ui.py --share
-```
-
-Copy the `https://….gradio.live` URL from the terminal to share the running app.
-
-### 2. Hugging Face Spaces (persistent URL)
-
-1. Create a new **Space** on [huggingface.co/spaces](https://huggingface.co/spaces) (SDK: Gradio).
-2. Upload `ui/gradio-ui.py` as `app.py` (or symlink), plus `ui/requirements.txt` as `requirements.txt`.
-3. Add the model files via **Git LFS** or load them from the Hub at runtime. Without the `ui/models/` checkpoints the Space shows the UI and an "Artefacts missing" message; include the checkpoints for live predictions.
-4. For a full Space in this repo, duplicate the app entrypoint and pin the dependencies in the Space root.
+Persistent public hosting (e.g. Hugging Face Gradio Space) remains future work: free-tier Gradio Spaces appear recently restricted or paid on many accounts ([HF forum reports](https://discuss.huggingface.co/t/gradio-sdk-now-marked-as-paid-when-creating-a-new-space/177619)), and DistilBERT weights (~255 MB) cannot live in this GitHub repo.
