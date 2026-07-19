@@ -1,6 +1,6 @@
 """Single-sample inference for the Gradio proof-of-concept UI.
 
-This module wraps the trained checkpoints under ``runs/`` behind a single
+This module wraps the trained checkpoints under ``ui/models/`` behind a single
 :class:`InferenceEngine`. Given one text string and/or one PIL image, the engine
 dispatches to the scorer that matches a UI ``model_key`` and returns a small,
 JSON-friendly result dictionary.
@@ -37,15 +37,10 @@ if str(_TRAINING_SRC) not in sys.path:
 
 from fusion_attention import load_attention_head_checkpoint, predict_attention_fusion  # noqa: E402
 from fusion_common import (  # noqa: E402
-    FUSION_ATTENTION_RUN_ID,
-    FUSION_EARLY_RUN_ID,
-    FUSION_LATE_RUN_ID,
     extract_sample_embeddings,
     load_distilbert_classifier,
     load_frozen_encoders,
     load_resnet_classifier,
-    require_unimodal_artifacts,
-    resolve_image_weights_path,
     score_image_sample,
     score_text_sample,
 )
@@ -53,7 +48,46 @@ from fusion_early import load_early_head_checkpoint, predict_early_fusion  # noq
 from fusion_late import load_late_combiner_checkpoint, predict_late_fusion  # noqa: E402
 
 TFIDF_PIPELINE_NAME = "tfidf_pipeline.joblib"
+RESNET_WEIGHTS_NAME = "resnet18_state.pt"
+LATE_FUSION_NAME = "late_fusion_combiner.pkl"
+EARLY_FUSION_NAME = "early_fusion_head.pt"
+ATTENTION_FUSION_NAME = "attention_fusion_head.pt"
+DISTILBERT_DIR_NAME = "model"
 THRESHOLD = 0.5
+MODELS_DIR = Path(__file__).resolve().parent / "models"
+
+
+def _distilbert_weights_present(text_dir: Path) -> bool:
+    """True if a Hugging Face weight file exists alongside config."""
+    return (text_dir / "model.safetensors").is_file() or (text_dir / "pytorch_model.bin").is_file()
+
+
+def _text_model_dir(models_dir: Path) -> Path:
+    """Return the DistilBERT Hugging Face save under ``ui/models/model/``."""
+    text_dir = models_dir / DISTILBERT_DIR_NAME
+    if not (text_dir / "config.json").is_file():
+        raise FileNotFoundError(
+            f"Missing DistilBERT model at {text_dir}/ — copy the training `model/` folder here."
+        )
+    if not _distilbert_weights_present(text_dir):
+        raise FileNotFoundError(
+            f"Missing DistilBERT weights in {text_dir}/ — copy `model.safetensors` from "
+            "Colab `My Drive/runs/text_distilbert_baseline/model/` (not stored in git)."
+        )
+    return text_dir
+
+
+def _image_weights_path(models_dir: Path) -> Path:
+    """Return the ResNet checkpoint in ``ui/models/``."""
+    primary = models_dir / RESNET_WEIGHTS_NAME
+    if primary.is_file():
+        return primary
+    epochs = sorted(models_dir.glob("resnet18_epoch*.pt"))
+    if epochs:
+        return epochs[-1]
+    raise FileNotFoundError(
+        f"No ResNet weights in {models_dir}/ — copy `resnet18_state.pt` from training."
+    )
 
 
 def pick_device() -> torch.device:
@@ -98,17 +132,16 @@ def _result(score_fake: float, **extra: Any) -> dict[str, Any]:
 
 
 class InferenceEngine:
-    """Lazy-load checkpoints from ``runs/`` and dispatch to the matching scorer."""
+    """Lazy-load checkpoints from ``ui/models/`` and dispatch to the matching scorer."""
 
-    def __init__(self, project_root: Path):
+    def __init__(self, models_dir: Path | None = None):
         """Configure paths and device; checkpoints load lazily on first use.
 
         Args:
-            project_root: Repository root containing the ``runs/`` directory with
-                the trained checkpoints.
+            models_dir: Directory containing trained checkpoints. Defaults to
+                :data:`MODELS_DIR` (``ui/models/``).
         """
-        self.root = project_root
-        self.runs = project_root / "runs"
+        self.models_dir = models_dir or MODELS_DIR
         self.device = pick_device()
         self._cache: dict[str, Any] = {}
 
@@ -176,7 +209,7 @@ class InferenceEngine:
             FileNotFoundError: If the saved TF-IDF pipeline is missing.
         """
         def load() -> Any:
-            path = self.runs / "text_tfidf_baseline" / TFIDF_PIPELINE_NAME
+            path = self.models_dir / TFIDF_PIPELINE_NAME
             if not path.is_file():
                 raise FileNotFoundError(
                     f"Missing {path.name} — re-run the TF-IDF notebook save cell."
@@ -240,7 +273,7 @@ class InferenceEngine:
         score_image = self._predict_resnet(image)["score_fake"]
         combiner = self._cached(
             "late_combiner",
-            lambda: load_late_combiner_checkpoint(self.runs / FUSION_LATE_RUN_ID),
+            lambda: load_late_combiner_checkpoint(self.models_dir),
         )
         _, score_fused = predict_late_fusion(
             combiner,
@@ -273,7 +306,7 @@ class InferenceEngine:
         text_emb, image_emb = self._sample_embeddings(text, image)
         head = self._cached(
             "early_head",
-            lambda: load_early_head_checkpoint(self.runs / FUSION_EARLY_RUN_ID, self.device),
+            lambda: load_early_head_checkpoint(self.models_dir, self.device),
         )
         _, scores = predict_early_fusion(head, text_emb, image_emb, self.device)
         return _result(float(scores[0]))
@@ -299,9 +332,7 @@ class InferenceEngine:
         text_emb, image_emb = self._sample_embeddings(text, image)
         head = self._cached(
             "attention_head",
-            lambda: load_attention_head_checkpoint(
-                self.runs / FUSION_ATTENTION_RUN_ID, self.device
-            ),
+            lambda: load_attention_head_checkpoint(self.models_dir, self.device),
         )
         _, scores, attn = predict_attention_fusion(head, text_emb, image_emb, self.device)
         return _result(
@@ -333,7 +364,7 @@ class InferenceEngine:
         Returns:
             A ``(model, tokenizer)`` pair.
         """
-        text_dir, _ = require_unimodal_artifacts(self.root)
+        text_dir = _text_model_dir(self.models_dir)
         return load_distilbert_classifier(text_dir, self.device)
 
     def _load_resnet(self) -> nn.Module:
@@ -342,7 +373,7 @@ class InferenceEngine:
         Returns:
             The ResNet-18 classifier model.
         """
-        weights = resolve_image_weights_path(self.root)
+        weights = _image_weights_path(self.models_dir)
         return load_resnet_classifier(weights, self.device)
 
     def _load_encoders(self) -> tuple[nn.Module, Any, nn.Module]:
@@ -351,18 +382,12 @@ class InferenceEngine:
         Returns:
             A ``(text_model, tokenizer, image_backbone)`` tuple.
         """
-        text_dir, image_weights = require_unimodal_artifacts(self.root)
+        text_dir = _text_model_dir(self.models_dir)
+        image_weights = _image_weights_path(self.models_dir)
         return load_frozen_encoders(text_dir, image_weights, self.device)
 
 
 @lru_cache(maxsize=1)
-def get_engine(project_root: str | Path) -> InferenceEngine:
-    """Return a process-wide :class:`InferenceEngine`, cached per root path.
-
-    Args:
-        project_root: Repository root passed to :class:`InferenceEngine`.
-
-    Returns:
-        A shared :class:`InferenceEngine` instance for ``project_root``.
-    """
-    return InferenceEngine(Path(project_root))
+def get_engine() -> InferenceEngine:
+    """Return a process-wide :class:`InferenceEngine` using :data:`MODELS_DIR`."""
+    return InferenceEngine()

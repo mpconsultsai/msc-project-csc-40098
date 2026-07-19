@@ -75,6 +75,7 @@ data/*
 # Full copies of data/ for local safety (timestamped; large)
 backups/
 datasets/
+# Large ML artefacts (weights / arrays — keep out of git)
 *.h5
 *.hdf5
 *.pt
@@ -85,16 +86,19 @@ datasets/
 *.pkl
 *.pickle
 *.joblib
-*.npz
+*.safetensors
 *.npy
+
+# Gradio demo checkpoints — local only (see ui/models/README.md)
+ui/models/*
+!ui/models/README.md
 
 # Optional notebook/report exports (regenerate from notebooks if needed)
 outputs/
-# Common output dirs
 results/
 predictions/
 checkpoints/
-models/
+runs/
 
 # --- Experiment tracking ---
 mlruns/
