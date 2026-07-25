@@ -93,6 +93,10 @@ datasets/
 ui/models/*
 !ui/models/README.md
 
+# Thesis demo video — submit separately, do not commit large MP4
+documents/demo/*
+!documents/demo/README.md
+
 # Optional notebook/report exports (regenerate from notebooks if needed)
 outputs/
 results/

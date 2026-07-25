@@ -90,6 +90,13 @@ Inference code (`ui/inference.py`) reuses the same fusion helpers as training, s
 
 ---
 
+## Demo video (thesis)
+
+For the CSC-40098 walkthrough, record a **2--4 minute screen capture** on Mac (QuickTime or **⌘⇧5**) while using the app at http://127.0.0.1:7860.
+Save as `documents/demo/poc-walkthrough.mp4` and submit with the thesis bundle (see [documents/demo/README.md](../documents/demo/README.md) for a suggested script).
+
+---
+
 ## Sharing and hosting (not required)
 
 Do **not** rely on temporary Gradio `--share` links (`*.gradio.live`): they expire and need the host machine left running. Persistent cloud hosting (e.g. Hugging Face Spaces) is out of scope for this deliverable.

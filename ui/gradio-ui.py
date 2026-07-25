@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import re
 import sys
 import time
@@ -133,6 +134,7 @@ TEXT_ONLY = {"text_tfidf", "text_distilbert"}
 IMAGE_ONLY = {"image_resnet18"}
 FUSION = {"fusion_late", "fusion_early", "fusion_attention"}
 
+
 # Flat filenames under ui/models/ (DistilBERT keeps a model/ subfolder).
 def _unimodal_for_fusion(root: Path) -> bool:
     text_dir = root / DISTILBERT_DIR_NAME
@@ -231,11 +233,11 @@ EXAMPLE_INFO: dict[str, str] = {
 }
 
 SCOPE_NOTICE = (
-    "Please use **news-related social post text** (headline or short post), "
-    "matching the style of the **FakeNewsNet** and **Fakeddit** training data. "
-    "For image or fusion models, **upload** an image or paste an **image URL** "
-    "and click **Load** to preview it (direct links and X photo pages). "
-    "Or use an **Examples** button; source details appear under **Result**."
+    "Use **social media news-related post text** in the style of **FakeNewsNet** and **Fakeddit**. "
+    "For image or fusion models, **upload** an image or paste an **image URL**, then **Load**. "
+    "To load a prepared case: open **Examples**, choose **Phase 1** (cohort) or **Phase 2** (external), "
+    "and click a case name—**GossipCop real**, **PolitiFact fake**, **Snopes viral claim**, or **BBC Earth (X)**. "
+    "Source notes appear under **Result**; click **Analyse** when ready."
 )
 
 IMAGE_URL_TIMEOUT_S = 8
@@ -352,6 +354,15 @@ def on_example_selected(
     return apply_demo_example(example_key, examples)
 
 
+def _normalise_http_url(url: str) -> str:
+    """Return a stripped URL or raise if it is not http(s) with a host."""
+    cleaned = url.strip()
+    parsed = urlparse(cleaned)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("Image URL must be a valid http(s) link.")
+    return cleaned
+
+
 def _download_url_bytes(url: str) -> tuple[bytes, str]:
     """Fetch URL bytes with size/timeout limits.
 
@@ -381,6 +392,14 @@ def _download_url_bytes(url: str) -> tuple[bytes, str]:
     return data, content_type
 
 
+def _is_html_response(content_type: str, data: bytes) -> bool:
+    """Return True when the payload looks like an HTML document."""
+    if "text/html" in content_type:
+        return True
+    prefix = data.lstrip()[:15].lower()
+    return prefix.startswith((b"<!doctype html", b"<html"))
+
+
 def _preview_image_url_from_html(html: str) -> str | None:
     """Extract ``og:image`` / ``twitter:image`` from an HTML page, if present."""
     match = _OG_IMAGE_RE.search(html)
@@ -392,6 +411,24 @@ def _preview_image_url_from_html(html: str) -> str | None:
 def _pil_from_bytes(data: bytes) -> Image.Image:
     """Decode image bytes to RGB PIL, or raise ``UnidentifiedImageError``."""
     return Image.open(BytesIO(data)).convert("RGB")
+
+
+def _fetch_og_preview_image(html_bytes: bytes) -> Image.Image:
+    """Resolve an image from a social/HTML page via ``og:image`` (one hop)."""
+    preview_url = _preview_image_url_from_html(html_bytes.decode("utf-8", errors="ignore"))
+    if not preview_url:
+        raise ValueError(
+            "That looks like a web page, not an image. "
+            "Paste a direct image link, or an X photo page."
+        )
+
+    preview_data, _ = _download_url_bytes(_normalise_http_url(preview_url))
+    try:
+        return _pil_from_bytes(preview_data)
+    except UnidentifiedImageError as exc:
+        raise ValueError(
+            "Could not load the page's preview image. Try a direct image link."
+        ) from exc
 
 
 def fetch_image_from_url(url: str) -> Image.Image:
@@ -410,43 +447,17 @@ def fetch_image_from_url(url: str) -> Image.Image:
         ValueError: If the URL is invalid, the download fails, the payload is too
             large, or no usable image can be resolved.
     """
-    parsed = urlparse(url.strip())
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise ValueError("Image URL must be a valid http(s) link.")
-
-    data, content_type = _download_url_bytes(url.strip())
+    url = _normalise_http_url(url)
+    data, content_type = _download_url_bytes(url)
 
     try:
         return _pil_from_bytes(data)
     except UnidentifiedImageError:
-        pass
-
-    looks_html = "text/html" in content_type or data.lstrip()[:15].lower().startswith(
-        (b"<!doctype html", b"<html")
-    )
-    if not looks_html:
-        raise ValueError(
-            "URL did not return a usable image (use a direct image link)."
-        )
-
-    preview = _preview_image_url_from_html(data.decode("utf-8", errors="ignore"))
-    if not preview:
-        raise ValueError(
-            "That looks like a web page, not an image. "
-            "Paste a direct image link, or an X photo page."
-        )
-
-    preview_parsed = urlparse(preview)
-    if preview_parsed.scheme not in {"http", "https"} or not preview_parsed.netloc:
-        raise ValueError("Page preview image URL is not valid.")
-
-    preview_data, _ = _download_url_bytes(preview)
-    try:
-        return _pil_from_bytes(preview_data)
-    except UnidentifiedImageError as exc:
-        raise ValueError(
-            "Could not load the page's preview image. Try a direct image link."
-        ) from exc
+        if not _is_html_response(content_type, data):
+            raise ValueError(
+                "URL did not return a usable image (use a direct image link)."
+            ) from None
+        return _fetch_og_preview_image(data)
 
 
 def resolve_image(
@@ -562,11 +573,6 @@ def project_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-def models_dir() -> Path:
-    """Return the ``ui/models/`` directory for inference checkpoints."""
-    return MODELS_DIR
-
-
 def artefacts_present(model_key: str) -> bool:
     """Check whether the trained artefacts for a model exist under ``ui/models/``.
 
@@ -577,9 +583,8 @@ def artefacts_present(model_key: str) -> bool:
         ``True`` if the run directory and the model-specific checkpoint file(s)
         are present, otherwise ``False``.
     """
-    run_path = models_dir()
     check = ARTEFACT_CHECKS.get(model_key, lambda _root: False)
-    return check(run_path)
+    return check(MODELS_DIR)
 
 
 def validate_inputs(
@@ -689,7 +694,7 @@ def format_verdict(
         "",
         f"- **P(fake):** {score_fake:.3f}",
         f"- **P(real):** {score_real:.3f}",
-        f"- **Decision threshold:** 0.50 (fake if P(fake) ≥ 0.50)",
+        "- **Decision threshold:** 0.50 (fake if P(fake) >= 0.50)",
         f"- **Model:** {model_label}",
     ]
 
@@ -776,10 +781,11 @@ def analyse(
 
     if not artefacts_present(model_key):
         msg = (
-            f"### Artefacts missing\n\n"
-            f"Expected checkpoints in `ui/models/` (see `ui/models/README.md`).\n\n"
-            f"Copy the trained files from Colab `My Drive/runs/` into `ui/models/`."
+            "### Artefacts missing\n\n"
+            "Expected checkpoints in `ui/models/` (see `ui/models/README.md`).\n\n"
+            "Copy the trained files from Colab `My Drive/runs/` into `ui/models/`."
         )
+
         return msg, {
             "error": "artefacts_missing",
             "model": model_key,
@@ -877,61 +883,32 @@ class DemoComponents:
 
 
 _RESET_ICON = _UI_DIR / "assets" / "reset.svg"
-_UI_BTN_CSS = """
-/* Header Reset stays content-sized. */
-#reset-btn {
-  flex: 0 0 auto !important;
-  width: fit-content !important;
-  max-width: fit-content !important;
-  align-self: flex-start !important;
-}
-#reset-btn > * {
-  width: fit-content !important;
-}
-#reset-btn button {
-  width: auto !important;
-  min-width: 8rem !important;
-  height: 2rem !important;
-  min-height: 2rem !important;
-  padding: 0 0.85rem !important;
-  white-space: nowrap;
-}
-#reset-btn img {
-  width: 0.85rem !important;
-  height: 0.85rem !important;
-  filter: brightness(0) invert(1);
-}
-/* Clear text, Load, Analyse, Examples — ~1/3 of the content width. */
-.compact-btn,
-.example-btn {
-  flex: 0 0 33% !important;
-  width: 33% !important;
-  max-width: 33% !important;
-  align-self: flex-start !important;
-}
-.compact-btn > *,
-.example-btn > * {
-  width: 100% !important;
-}
-.compact-btn button,
-.example-btn button {
-  width: 100% !important;
-  height: 2rem !important;
-  min-height: 2rem !important;
-  padding: 0 0.85rem !important;
-  white-space: nowrap;
-}
-.section-divider {
-  border: none;
-  border-top: 1px solid var(--border-color-primary, #e5e7eb);
-  margin: 1.25rem 0;
-}
-"""
+_STYLESHEET_PATH = _UI_DIR / "stylesheet.css"
+
+# BEM class hooks — block name matches project title (see ui/stylesheet.css)
+_BEM_BLOCK = "multimodal-fake-news"
+_BEM_RESET = f"{_BEM_BLOCK}__reset"
+_BEM_BTN = f"{_BEM_BLOCK}__btn"
+_BEM_DIVIDER = f"{_BEM_BLOCK}__divider"
+
+
+_UI_THEME = gr.themes.Origin()
+
+
+def _apply_app_styling(demo: gr.Blocks) -> None:
+    """Set app-level theme and CSS without Gradio 6.0 Blocks constructor deprecations."""
+    demo.theme = _UI_THEME
+    demo.theme_css = _UI_THEME._get_theme_css()
+    demo.stylesheets = _UI_THEME._stylesheets
+    theme_hasher = hashlib.sha256()
+    theme_hasher.update(demo.theme_css.encode("utf-8"))
+    demo.theme_hash = theme_hasher.hexdigest()
+    demo.css = _STYLESHEET_PATH.read_text(encoding="utf-8")
 
 
 def _section_divider() -> gr.HTML:
     """Render a horizontal rule between major UI sections."""
-    return gr.HTML('<hr class="section-divider" />')
+    return gr.HTML(f'<hr class="{_BEM_DIVIDER}" />')
 
 
 def _build_header() -> gr.Button:
@@ -952,7 +929,7 @@ def _build_header() -> gr.Button:
                 icon=str(_RESET_ICON) if _RESET_ICON.is_file() else None,
                 variant="primary",
                 size="sm",
-                elem_id="reset-btn",
+                elem_classes=[_BEM_RESET],
             )
     gr.Markdown(SCOPE_NOTICE)
     return reset_btn
@@ -997,7 +974,7 @@ def _build_inputs() -> tuple[
             clear_text_btn = gr.Button(
                 "Clear text",
                 size="sm",
-                elem_classes=["compact-btn"],
+                elem_classes=[_BEM_BTN],
             )
         with gr.Tab("Image", id="image") as image_tab:
             image_in = gr.Image(
@@ -1019,7 +996,7 @@ def _build_inputs() -> tuple[
                     "Load",
                     size="sm",
                     scale=1,
-                    elem_classes=["compact-btn"],
+                    elem_classes=[_BEM_BTN],
                 )
     return (
         input_tabs,
@@ -1047,13 +1024,13 @@ def _build_examples() -> tuple[gr.Tabs, dict[str, gr.Button]]:
             with gr.Row():
                 for key, label in EXAMPLE_BUTTONS_PHASE1:
                     example_btns[key] = gr.Button(
-                        label, size="sm", elem_classes=["example-btn"]
+                        label, size="sm", elem_classes=[_BEM_BTN]
                     )
         with gr.Tab("Phase 2", id="phase2"):
             with gr.Row():
                 for key, label in EXAMPLE_BUTTONS_PHASE2:
                     example_btns[key] = gr.Button(
-                        label, size="sm", elem_classes=["example-btn"]
+                        label, size="sm", elem_classes=[_BEM_BTN]
                     )
     return example_tabs, example_btns
 
@@ -1070,7 +1047,7 @@ def _build_result() -> tuple[gr.Markdown, gr.Button, gr.Markdown]:
         "Analyse",
         variant="primary",
         size="sm",
-        elem_classes=["compact-btn"],
+        elem_classes=[_BEM_BTN],
     )
     verdict_out = gr.Markdown(value="")
     return example_info, analyse_btn, verdict_out
@@ -1150,8 +1127,6 @@ def build_demo() -> gr.Blocks:
 
     with gr.Blocks(
         title="Multimodal Fake News Detection on Social Media",
-        theme=gr.themes.Origin(),
-        css=_UI_BTN_CSS,
     ) as demo:
         reset_btn = _build_header()
         _section_divider()
@@ -1192,6 +1167,7 @@ def build_demo() -> gr.Blocks:
         )
         _wire_events(components, demo, demo_examples)
 
+    _apply_app_styling(demo)
     return demo
 
 

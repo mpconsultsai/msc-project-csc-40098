@@ -1,0 +1,64 @@
+/**
+ * UI layout overrides (BEM block: multimodal-fake-news).
+ * Class hooks are set via elem_classes in ui/gradio-ui.py.
+ */
+
+:root {
+  --mfnd-btn-height: 2rem;
+  --mfnd-btn-padding: 0 0.85rem;
+  --mfnd-btn-width: 33%;
+}
+
+/* Shared button sizing inside Gradio component wrappers */
+.multimodal-fake-news__reset button,
+.multimodal-fake-news__btn button {
+  height: var(--mfnd-btn-height) !important;
+  min-height: var(--mfnd-btn-height) !important;
+  padding: var(--mfnd-btn-padding) !important;
+  white-space: nowrap;
+}
+
+/* Header reset — content-sized, not full row width */
+.multimodal-fake-news__reset {
+  flex: 0 0 auto !important;
+  width: fit-content !important;
+  max-width: fit-content !important;
+  align-self: flex-start !important;
+}
+
+.multimodal-fake-news__reset > * {
+  width: fit-content !important;
+}
+
+.multimodal-fake-news__reset button {
+  width: auto !important;
+  min-width: 8rem !important;
+}
+
+.multimodal-fake-news__reset img {
+  width: 0.85rem !important;
+  height: 0.85rem !important;
+  filter: brightness(0) invert(1);
+}
+
+/* Clear, Load, Analyse, Examples — ~one-third content width */
+.multimodal-fake-news__btn {
+  flex: 0 0 var(--mfnd-btn-width) !important;
+  width: var(--mfnd-btn-width) !important;
+  max-width: var(--mfnd-btn-width) !important;
+  align-self: flex-start !important;
+}
+
+.multimodal-fake-news__btn > * {
+  width: 100% !important;
+}
+
+.multimodal-fake-news__btn button {
+  width: 100% !important;
+}
+
+.multimodal-fake-news__divider {
+  border: none;
+  border-top: 1px solid var(--border-color-primary, #e5e7eb);
+  margin: 1.25rem 0;
+}
