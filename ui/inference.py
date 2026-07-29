@@ -103,6 +103,28 @@ def pick_device() -> torch.device:
     return torch.device("cpu")
 
 
+# User-facing labels for verdict output (key = torch device type, before any :index).
+DEVICE_LABELS: dict[str, str] = {
+    "cpu": "CPU",
+    "cuda": "NVIDIA GPU (CUDA)",
+    "mps": "Apple GPU (MPS)",
+}
+
+
+def format_device_label(device: str | torch.device) -> str:
+    """Map a PyTorch device to a short display label.
+
+    Args:
+        device: Device string or :class:`torch.device` (e.g. ``cuda``, ``cuda:0``, ``mps``).
+
+    Returns:
+        A mapped label when the device *type* is known; otherwise the original string.
+    """
+    raw = str(device)
+    key = raw.split(":")[0].lower()
+    return DEVICE_LABELS.get(key, raw)
+
+
 def label_from_score(score_fake: float) -> str:
     """Map a fake-probability score to a user-facing label.
 

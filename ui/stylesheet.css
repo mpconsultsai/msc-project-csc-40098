@@ -9,6 +9,29 @@
   --mfnd-btn-width: 33%;
 }
 
+/* App header — title left, reset right */
+.multimodal-fake-news__app-bar {
+  align-items: flex-start !important;
+  gap: 1rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.multimodal-fake-news__app-bar > .block,
+.multimodal-fake-news__app-bar > .form {
+  margin: 0 !important;
+}
+
+.multimodal-fake-news__app-bar > .gradio-markdown {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.multimodal-fake-news__app-bar > .gradio-markdown h1 {
+  margin: 0 !important;
+  font-size: 1.35rem !important;
+  line-height: 1.25 !important;
+}
+
 /* Shared button sizing inside Gradio component wrappers */
 .multimodal-fake-news__reset button,
 .multimodal-fake-news__btn button {
@@ -18,12 +41,13 @@
   white-space: nowrap;
 }
 
-/* Header reset — content-sized, not full row width */
+/* Header reset — content-sized, top-right in app bar */
 .multimodal-fake-news__reset {
   flex: 0 0 auto !important;
   width: fit-content !important;
   max-width: fit-content !important;
   align-self: flex-start !important;
+  margin-top: 0.15rem !important;
 }
 
 .multimodal-fake-news__reset > * {
@@ -32,7 +56,7 @@
 
 .multimodal-fake-news__reset button {
   width: auto !important;
-  min-width: 8rem !important;
+  min-width: 7.5rem !important;
 }
 
 .multimodal-fake-news__reset img {
@@ -60,5 +84,15 @@
 .multimodal-fake-news__divider {
   border: none;
   border-top: 1px solid var(--border-color-primary, #e5e7eb);
-  margin: 1.25rem 0;
+  margin: 0.5rem 0;
+}
+
+/* Collapse extra Gradio HTML block spacing around dividers */
+.gradio-html:has(.multimodal-fake-news__divider) {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.gradio-html:has(.multimodal-fake-news__divider) > .html-container {
+  padding: 0 !important;
 }

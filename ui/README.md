@@ -41,6 +41,8 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r ui/requirements.txt
 ```
 
+Pinned for reproducibility: **Gradio 6.20.0** (see `ui/requirements.txt` for the full PoC stack).
+
 (Or: `.venv/bin/pip install -r ui/requirements.txt` without activating.)
 
 ### 4. Copy the trained model files

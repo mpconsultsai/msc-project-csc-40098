@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import re
 import sys
 import time
@@ -52,6 +51,7 @@ from inference import (  # noqa: E402
     RESNET_WEIGHTS_NAME,
     TFIDF_PIPELINE_NAME,
     _distilbert_weights_present,
+    format_device_label,
     get_engine,
 )
 # --- Model catalogue (matches training run folders) ---
@@ -191,7 +191,7 @@ E2_BBC_EARTH_TEXT = (
     "cat in the world"
 )
 
-# Example buttons by phase tab: (key, short label). Details go in Result.
+# Example buttons by phase tab: (key, short label). Details show above Analyse.
 EXAMPLE_BUTTONS_PHASE1: list[tuple[str, str]] = [
     ("cohort_real", "GossipCop real"),
     ("cohort_fake", "PolitiFact fake"),
@@ -204,7 +204,7 @@ EXAMPLE_BUTTONS: list[tuple[str, str]] = (
     EXAMPLE_BUTTONS_PHASE1 + EXAMPLE_BUTTONS_PHASE2
 )
 
-# Source blurb shown in Result when an example button is clicked.
+# Source blurb shown above Analyse when an example button is clicked.
 EXAMPLE_INFO: dict[str, str] = {
     "cohort_real": (
         "**Phase 1** — Frozen FakeNewsNet cohort row "
@@ -222,8 +222,7 @@ EXAMPLE_INFO: dict[str, str] = {
         "**Phase 2** — Viral social claim discussed by Snopes "
         "([fact check](https://www.snopes.com/fact-check/dog-child-venezuela-earthquake/); "
         "Ibrahim, 2026), rated Fake (AI-style image).\n\n"
-        "Demonstrates pattern-match vs fact-check. Image is third-party; demo use only "
-        "(see `ui/assets/examples/README.md`)."
+        "Demonstrates pattern-match vs fact-check. Image is third-party; demo use only."
     ),
     "e2_bbc_earth": (
         "**Phase 2** — Official [@BBCEarth](https://x.com/BBCEarth/status/1292022742137466880) "
@@ -232,14 +231,10 @@ EXAMPLE_INFO: dict[str, str] = {
     ),
 }
 
-SCOPE_NOTICE = (
-    "Use **social media news-related post text** in the style of **FakeNewsNet** and **Fakeddit**. "
-    "For image or fusion models, **upload** an image or paste an **image URL**, then **Load**. "
-    "To load a prepared case: open **Examples**, choose **Phase 1** (cohort) or **Phase 2** (external), "
-    "and click a case name—**GossipCop real**, **PolitiFact fake**, **Snopes viral claim**, or **BBC Earth (X)**. "
-    "Source notes appear under **Result**; click **Analyse** when ready."
-)
-
+# Remote image fetch limits for View Input → image URL → Load (_download_url_bytes).
+# IMAGE_URL_TIMEOUT_S — abort slow or dead links instead of hanging the UI.
+# IMAGE_URL_MAX_BYTES — cap payload size so large files do not exhaust memory.
+# IMAGE_URL_USER_AGENT — identify the PoC; many CDNs and social pages reject bare urllib requests.
 IMAGE_URL_TIMEOUT_S = 8
 IMAGE_URL_MAX_BYTES = 8 * 1024 * 1024
 IMAGE_URL_USER_AGENT = (
@@ -308,7 +303,7 @@ def _load_local_image(path: Path) -> Image.Image | None:
 def load_demo_examples(
     root: Path,
 ) -> dict[str, tuple[str, Image.Image | None]]:
-    """Preload cohort and Phase~2 demo posts (content only; labels not shown).
+    """Preload cohort and Phase~2 demo posts.
 
     Args:
         root: Repository root containing the cohort TSVs and images.
@@ -329,7 +324,7 @@ def apply_demo_example(
     example_key: str | None,
     examples: dict[str, tuple[str, Image.Image | None]],
 ) -> tuple[str, Image.Image | None, str, str, str]:
-    """Return text, image, cleared URL, source info for Result, and cleared verdict.
+    """Return text, image, cleared URL, example source info, and cleared verdict.
 
     Args:
         example_key: A key in ``examples``, or empty/None for no selection.
@@ -350,7 +345,7 @@ def on_example_selected(
     example_key: str | None,
     examples: dict[str, tuple[str, Image.Image | None]],
 ) -> tuple[Any, ...]:
-    """Load the selected example into the inputs; show source details in Result."""
+    """Load the selected example into the inputs and show source details."""
     return apply_demo_example(example_key, examples)
 
 
@@ -625,7 +620,7 @@ def model_info_markdown(model_key: str) -> str:
         model_key: A key in :data:`MODEL_CATALOG`.
 
     Returns:
-        A Markdown blurb (modality, paradigm, architecture, inputs), or an empty
+        Markdown content (modality, paradigm, architecture, inputs), or an empty
         string if ``model_key`` is unknown.
     """
     c = MODEL_CATALOG.get(model_key, {})
@@ -707,7 +702,7 @@ def format_verdict(
 
     device = detail.get("device")
     if device:
-        lines.append(f"- **Device:** `{device}`")
+        lines.append(f"- **Device:** {format_device_label(device)}")
 
     if "score_text" in detail and "score_image" in detail:
         lines.append(
@@ -890,48 +885,40 @@ _BEM_BLOCK = "multimodal-fake-news"
 _BEM_RESET = f"{_BEM_BLOCK}__reset"
 _BEM_BTN = f"{_BEM_BLOCK}__btn"
 _BEM_DIVIDER = f"{_BEM_BLOCK}__divider"
+_BEM_APP_BAR = f"{_BEM_BLOCK}__app-bar"
 
 
 _UI_THEME = gr.themes.Origin()
 
 
-def _apply_app_styling(demo: gr.Blocks) -> None:
-    """Set app-level theme and CSS without Gradio 6.0 Blocks constructor deprecations."""
-    demo.theme = _UI_THEME
-    demo.theme_css = _UI_THEME._get_theme_css()
-    demo.stylesheets = _UI_THEME._stylesheets
-    theme_hasher = hashlib.sha256()
-    theme_hasher.update(demo.theme_css.encode("utf-8"))
-    demo.theme_hash = theme_hasher.hexdigest()
-    demo.css = _STYLESHEET_PATH.read_text(encoding="utf-8")
+def _launch_styling_kwargs() -> dict[str, object]:
+    """App-level theme/CSS for ``Blocks.launch()`` (Gradio 6+)."""
+    return {
+        "theme": _UI_THEME,
+        "css_paths": [_STYLESHEET_PATH],
+    }
 
 
 def _section_divider() -> gr.HTML:
     """Render a horizontal rule between major UI sections."""
-    return gr.HTML(f'<hr class="{_BEM_DIVIDER}" />')
+    return gr.HTML(f'<hr class="{_BEM_DIVIDER}" />', padding=False)
 
 
 def _build_header() -> gr.Button:
-    """Render the title, scope notice, and top Reset control.
+    """Render the title and top Reset control.
 
     Returns:
         The Reset button (wired later).
     """
-    with gr.Row():
-        with gr.Column(scale=1):
-            gr.Markdown(
-                "# Multimodal Fake News Detection on Social Media\n"
-                "Choose a **model** first — only the input tabs that model needs are shown."
-            )
-        with gr.Column(scale=0, min_width=96):
-            reset_btn = gr.Button(
-                "Reset",
-                icon=str(_RESET_ICON) if _RESET_ICON.is_file() else None,
-                variant="primary",
-                size="sm",
-                elem_classes=[_BEM_RESET],
-            )
-    gr.Markdown(SCOPE_NOTICE)
+    with gr.Row(elem_classes=[_BEM_APP_BAR]):
+        gr.Markdown("# Multimodal Fake News Detection on Social Media")
+        reset_btn = gr.Button(
+            "Reset",
+            icon=str(_RESET_ICON) if _RESET_ICON.is_file() else None,
+            variant="primary",
+            size="sm",
+            elem_classes=[_BEM_RESET],
+        )
     return reset_btn
 
 
@@ -941,7 +928,7 @@ def _build_model_selector() -> tuple[gr.Dropdown, gr.Markdown]:
     Returns:
         The ``(model dropdown, model info markdown)`` components.
     """
-    gr.Markdown("## Model")
+    gr.Markdown("## Select Model")
     model_in = gr.Dropdown(label="Model", choices=MODEL_CHOICES, value=DEFAULT_MODEL)
     model_info = gr.Markdown(value=model_info_markdown(DEFAULT_MODEL))
     return model_in, model_info
@@ -963,7 +950,7 @@ def _build_inputs() -> tuple[
         ``(tabs, text tab, image tab, text input, clear-text button, image
         input, image URL, load-URL button)``.
     """
-    gr.Markdown("## Inputs")
+    gr.Markdown("## View Input")
     with gr.Tabs(selected="text") as input_tabs:
         with gr.Tab("Text", id="text") as text_tab:
             text_in = gr.Textbox(
@@ -1016,8 +1003,7 @@ def _build_examples() -> tuple[gr.Tabs, dict[str, gr.Button]]:
     Returns:
         ``(example tabs, map of example key → button)``.
     """
-    gr.Markdown("## Examples")
-    gr.Markdown("Loads a sample into the form. Details show under **Result**.")
+    gr.Markdown("## Load Examples")
     example_btns: dict[str, gr.Button] = {}
     with gr.Tabs(selected="phase1") as example_tabs:
         with gr.Tab("Phase 1", id="phase1"):
@@ -1035,13 +1021,12 @@ def _build_examples() -> tuple[gr.Tabs, dict[str, gr.Button]]:
     return example_tabs, example_btns
 
 
-def _build_result() -> tuple[gr.Markdown, gr.Button, gr.Markdown]:
-    """Build the Result section: example source info, Analyse, and verdict.
+def _build_analyse() -> tuple[gr.Markdown, gr.Button, gr.Markdown]:
+    """Build example source info, Analyse button, and verdict output.
 
     Returns:
         The ``(example info, analyse button, verdict)`` components.
     """
-    gr.Markdown("## Result")
     example_info = gr.Markdown(value="")
     analyse_btn = gr.Button(
         "Analyse",
@@ -1145,7 +1130,7 @@ def build_demo() -> gr.Blocks:
             load_url_btn,
         ) = _build_inputs()
         _section_divider()
-        example_info, analyse_btn, verdict_out = _build_result()
+        example_info, analyse_btn, verdict_out = _build_analyse()
 
         components = DemoComponents(
             model_in=model_in,
@@ -1167,7 +1152,6 @@ def build_demo() -> gr.Blocks:
         )
         _wire_events(components, demo, demo_examples)
 
-    _apply_app_styling(demo)
     return demo
 
 
@@ -1197,4 +1181,5 @@ if __name__ == "__main__":
         share=args.share,
         server_name=args.host,
         server_port=args.port,
+        **_launch_styling_kwargs(),
     )
