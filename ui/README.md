@@ -10,7 +10,7 @@ Local demo that scores a single news-like social post (text and/or image) as lik
 |------|--------|
 | This repository | `git clone https://github.com/mpconsultsai/msc-project-csc-40098.git` then work from that folder. |
 | Python 3 | With a virtual environment at `.venv` (see root [README](../README.md)). |
-| Model files | Copy into `ui/models/` (not in git — see [models/README.md](models/README.md)). |
+| Model files | Copy into `ui/models/` (not in git — see [Model checkpoints](#model-checkpoints-uimodels) below). |
 | Cohort data (optional) | Needed only for **Phase 1** Examples: `data/fake_news_final_*.tsv` and cohort images under `data/`. **Phase 2** Examples use files under `ui/assets/examples/`. |
 
 If a model’s files are missing, the app still starts and shows an **Artefacts missing** message instead of a prediction.
@@ -47,7 +47,7 @@ Pinned for reproducibility: **Gradio 6.20.0** (see `ui/requirements.txt` for the
 
 ### 4. Copy the trained model files
 
-Place checkpoints in `ui/models/` as listed in [models/README.md](models/README.md). Typical source: Colab `My Drive/runs/`.
+Place checkpoints in `ui/models/` as listed in [Model checkpoints](#model-checkpoints-uimodels). Typical source: Colab `My Drive/runs/`.
 
 At minimum for a full demo you need DistilBERT’s `model/model.safetensors` (~255 MB) plus the other listed files. Without DistilBERT weights, TF–IDF and ResNet can still run if their files are present; fusion models will not.
 
@@ -77,7 +77,21 @@ The first prediction for each model in a session is slower (lazy load); later ca
 
 ---
 
-## Which files each model uses
+## Model checkpoints (`ui/models/`)
+
+This folder is **gitignored**. After training in Colab, copy artefacts from `My Drive/runs/` into `ui/models/`:
+
+```
+ui/models/
+├── tfidf_pipeline.joblib          ← runs/text_tfidf_baseline/
+├── model/                         ← runs/text_distilbert_baseline/model/
+│   ├── config.json, tokenizer.*
+│   └── model.safetensors           ← ~255 MB
+├── resnet18_state.pt              ← runs/image_resnet18_baseline/
+├── late_fusion_combiner.pkl       ← runs/fusion_late_logistic/
+├── early_fusion_head.pt           ← runs/fusion_early_concat/
+└── attention_fusion_head.pt       ← runs/fusion_attention/
+```
 
 | Model in the UI | Files under `ui/models/` |
 |-----------------|---------------------------|
@@ -87,5 +101,7 @@ The first prediction for each model in a session is slower (lazy load); later ca
 | Late fusion | `late_fusion_combiner.pkl` + DistilBERT `model/` + `resnet18_state.pt` |
 | Early fusion | `early_fusion_head.pt` + DistilBERT `model/` + `resnet18_state.pt` |
 | Attention fusion | `attention_fusion_head.pt` + DistilBERT `model/` + `resnet18_state.pt` |
+
+Fusion models need the unimodal files (`model/`, `resnet18_state.pt`) as well. Without `model.safetensors`, DistilBERT and all fusion models will not run (TF–IDF and ResNet still work once their files are present).
 
 Inference code (`ui/inference.py`) reuses the same fusion helpers as training, so scores match the locked experiments when these artefacts are present.

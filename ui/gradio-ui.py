@@ -11,7 +11,7 @@ If you see ``ModuleNotFoundError: No module named 'gradio'``, you are not using
 ``.venv`` — activate it (``source .venv/bin/activate``) or use the paths above.
 
 Inference is in ``ui/inference.py`` (loads checkpoints from ``ui/models/``).
-Copy trained checkpoints into ``ui/models/`` (flat layout — see ``ui/models/README.md``).
+Copy trained checkpoints into ``ui/models/`` (flat layout — see ``ui/README.md``).
 
 Deploy:
   Local:     .venv/bin/python ui/gradio-ui.py
@@ -767,7 +767,7 @@ def analyse(
     if not artefacts_present(model_key):
         msg = (
             "### Artefacts missing\n\n"
-            "Expected checkpoints in `ui/models/` (see `ui/models/README.md`).\n\n"
+            "Expected checkpoints in `ui/models/` (see `ui/README.md`).\n\n"
             "Copy the trained files from Colab `My Drive/runs/` into `ui/models/`."
         )
 

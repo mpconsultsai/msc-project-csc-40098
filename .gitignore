@@ -89,9 +89,8 @@ datasets/
 *.safetensors
 *.npy
 
-# Gradio demo checkpoints — local only (see ui/models/README.md)
-ui/models/*
-!ui/models/README.md
+# Gradio demo checkpoints — local only (see ui/README.md)
+ui/models/
 
 # Thesis demo video — submit separately, do not commit large MP4
 documents/demo/*
