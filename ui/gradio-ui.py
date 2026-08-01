@@ -25,7 +25,6 @@ import argparse
 import csv
 import re
 import sys
-import time
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
@@ -666,7 +665,6 @@ def format_verdict(
     score_fake: float,
     model_label: str,
     *,
-    latency_ms: float | None = None,
     detail: dict[str, Any] | None = None,
 ) -> str:
     """Format the prediction as the Markdown verdict shown in the UI.
@@ -675,12 +673,11 @@ def format_verdict(
         label: The predicted label (e.g. ``"Likely fake"``).
         score_fake: ``P(fake)`` in ``[0, 1]``.
         model_label: The display name of the model used.
-        latency_ms: End-to-end inference time in milliseconds, if known.
         detail: Optional extras from the engine (late-fusion scores, attention
             weights, device).
 
     Returns:
-        A Markdown string with the estimate, score, timing/diagnostics, and disclaimer.
+        A Markdown string with the estimate, score, diagnostics, and disclaimer.
     """
     detail = detail or {}
     score_real = 1.0 - score_fake
@@ -692,13 +689,6 @@ def format_verdict(
         "- **Decision threshold:** 0.50 (fake if P(fake) >= 0.50)",
         f"- **Model:** {model_label}",
     ]
-
-    if latency_ms is not None:
-        if latency_ms >= 1000:
-            timing = f"{latency_ms / 1000:.2f} s ({latency_ms:.0f} ms)"
-        else:
-            timing = f"{latency_ms:.0f} ms"
-        lines.append(f"- **Time to return:** {timing}")
 
     device = detail.get("device")
     if device:
@@ -754,8 +744,8 @@ def analyse(
 
     Returns:
         A ``(markdown, detail)`` pair: the Markdown to display, and a detail dict
-        with the raw result plus ``model`` and ``latency_ms`` (or an ``error``
-        key when validation fails, artefacts are missing, or inference raises).
+        with the raw result (or an ``error`` key when validation fails, artefacts
+        are missing, or inference raises).
     """
     model_label = model_display_name(model_key)
 
@@ -788,7 +778,6 @@ def analyse(
         }
 
     engine = get_engine()
-    t0 = time.perf_counter()
     try:
         result = engine.predict(text, resolved, model_key)
     except Exception as exc:
@@ -802,13 +791,11 @@ def analyse(
             },
         )
 
-    latency_ms = (time.perf_counter() - t0) * 1000
     label = result.get("label", "unknown")
     score_fake = float(result.get("score_fake", 0.0))
     detail = {
         **result,
         "model": model_key,
-        "latency_ms": round(latency_ms, 2),
         "device": str(getattr(engine, "device", "cpu")),
         "resolved_image": resolved,
     }
@@ -817,7 +804,6 @@ def analyse(
             label,
             score_fake,
             model_label,
-            latency_ms=latency_ms,
             detail=detail,
         ),
         detail,

@@ -70,7 +70,7 @@ Stop the server with `Ctrl+C` in the terminal.
 1. Choose a **Model** (text-only, image-only, or fusion). Only the input tabs that model needs are shown.
 2. Optionally open **Examples** → **Phase 1** or **Phase 2** and click a button to load a prepared case (source note appears under **Result**). Or type/paste your own post text and/or upload an image.
 3. On the **Image** tab you can also paste an image URL and click **Load** (direct image links and X photo pages).
-4. Click **Analyse** and read the verdict, fake-probability, and latency under **Result**.
+4. Click **Analyse** and read the verdict and fake-probability under **Result**.
 5. **Reset** clears inputs and returns to the default model.
 
 The first prediction for each model in a session is slower (lazy load); later calls are usually faster.
@@ -89,13 +89,6 @@ The first prediction for each model in a session is slower (lazy load); later ca
 | Attention fusion | `attention_fusion_head.pt` + DistilBERT `model/` + `resnet18_state.pt` |
 
 Inference code (`ui/inference.py`) reuses the same fusion helpers as training, so scores match the locked experiments when these artefacts are present.
-
----
-
-## Demo video (thesis)
-
-For the CSC-40098 walkthrough, record a **2--4 minute screen capture** on Mac (QuickTime or **⌘⇧5**) while using the app at http://127.0.0.1:7860.
-Save as `documents/demo/poc-walkthrough.mp4` and submit with the thesis bundle (see [documents/demo/README.md](../documents/demo/README.md) for a suggested script).
 
 ---
 
