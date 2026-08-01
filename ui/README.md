@@ -67,11 +67,11 @@ Stop the server with `Ctrl+C` in the terminal.
 
 ## Using the app (short guide)
 
-1. Choose a **Model** (text-only, image-only, or fusion). Only the input tabs that model needs are shown.
-2. Optionally open **Examples** → **Phase 1** or **Phase 2** and click a button to load a prepared case (source note appears under **Result**). Or type/paste your own post text and/or upload an image.
-3. On the **Image** tab you can also paste an image URL and click **Load** (direct image links and X photo pages).
-4. Click **Analyse** and read the verdict and fake-probability under **Result**.
-5. **Reset** clears inputs and returns to the default model.
+1. Under **Select Model**, choose a model (text-only, image-only, or fusion). Only the **View Input** tabs that model needs are shown.
+2. Optionally open **Load Examples** → **Phase 1** or **Phase 2** and click a button to load a prepared case (a source note appears above **Analyse**). Or enter your own text and/or image under **View Input**.
+3. On the **Image** tab you can paste an image URL and click **Load** (direct image links and X photo pages).
+4. Click **Analyse** to see the verdict and P(fake) below the button.
+5. **Reset** (top right) clears inputs and returns to the default model.
 
 The first prediction for each model in a session is slower (lazy load); later calls are usually faster.
 
@@ -89,9 +89,3 @@ The first prediction for each model in a session is slower (lazy load); later ca
 | Attention fusion | `attention_fusion_head.pt` + DistilBERT `model/` + `resnet18_state.pt` |
 
 Inference code (`ui/inference.py`) reuses the same fusion helpers as training, so scores match the locked experiments when these artefacts are present.
-
----
-
-## Sharing and hosting (not required)
-
-Do **not** rely on temporary Gradio `--share` links (`*.gradio.live`): they expire and need the host machine left running. Persistent cloud hosting (e.g. Hugging Face Spaces) is out of scope for this deliverable.
