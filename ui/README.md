@@ -65,15 +65,15 @@ Stop the server with `Ctrl+C` in the terminal.
 
 ---
 
-## Using the app (short guide)
+## Running the Gradio PoC
 
-1. Under **Select Model**, choose a model (text-only, image-only, or fusion). Only the **View Input** tabs that model needs are shown.
-2. Optionally open **Load Examples** → **Phase 1** or **Phase 2** and click a button to load a prepared case (a source note appears above **Analyse**). Or enter your own text and/or image under **View Input**.
-3. On the **Image** tab you can paste an image URL and click **Load** (direct image links and X photo pages).
-4. Click **Analyse** to see the verdict and P(fake) below the button.
-5. **Reset** (top right) clears inputs and returns to the default model.
+1. **Select Model** — text-only, image-only, or fusion (defaults to attention fusion when checkpoints are present). Only the **View Input** tabs that model needs are shown.
+2. **Load Examples** → **Phase 1** (GossipCop real, PolitiFact fake) or **Phase 2** (Snopes viral claim, BBC Earth) — or enter your own text and/or image. A source note appears above **Analyse** when an example is loaded.
+3. **Image** tab — upload a file or paste a URL and click **Load** (direct image links and X photo pages).
+4. **Analyse** — verdict, P(fake), and for fusion models optional late-fusion scores or attention weights.
+5. **Reset** (top right) — clear inputs and restore the default model.
 
-The first prediction for each model in a session is slower (lazy load); later calls are usually faster.
+The first prediction for each model in a session is slower (lazy-loaded checkpoints); later calls are usually faster.
 
 ---
 

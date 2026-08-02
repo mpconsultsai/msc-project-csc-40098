@@ -148,7 +148,7 @@ def verify_jpeg_payloads(
             f"{len(bad)} cohort image(s) have a .jpg name but non-JPEG payload "
             f"(can cause UnidentifiedImageError during training).\n"
             f"{sample}{extra}\n"
-            "Re-normalise images.zip (see training README / decision log) and "
+            "Re-normalise images.zip (see training README) and "
             "re-run the Setup cell."
         )
 

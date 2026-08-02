@@ -77,7 +77,7 @@ zip -r images.zip processed/images/ -x "*.log"
 
 > **Image payload QC.** A few publisher CDN files were saved as `.jpg` but contained
 > AVIF or JPEG2000 bytes. These passed local pipeline validation but broke Colab
-> training. Normalise to real JPEG before zipping (see project decision log). The
+> training. Normalise to real JPEG before zipping. The
 > image and fusion notebooks call `verify_jpeg_payloads()` after load to catch
 > stale zips early.
 
@@ -111,14 +111,8 @@ notebooks create `My Drive/runs/` automatically when training finishes.
 > **GitHub won't render a notebook** (`metadata.widgets` / missing `state`): Colab
 > sometimes adds broken widget metadata after training progress bars (tqdm,
 > DistilBERT `Trainer`, etc.). **After a full Colab run**, before committing
-> notebooks to GitHub:
->
-> ```bash
-> python training/scripts/clean_notebook_for_github.py training/notebooks/*.ipynb
-> ```
->
-> Or in Colab: **Edit → Clear all outputs**, then download and commit. Keep
-> authoritative metrics in `My Drive/runs/` (`metrics.json`, plots) — the GitHub
+> notebooks to GitHub, use **Edit → Clear all outputs**, then download and commit.
+> Keep authoritative metrics in `My Drive/runs/` (`metrics.json`, plots) — the GitHub
 > notebooks are a **code + reproducibility record**, not the primary results store.
 
 ### Step 2.2 — Open a notebook and select the runtime
