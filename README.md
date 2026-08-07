@@ -3,15 +3,15 @@
 This repository covers the end-to-end workflow for **multimodal (text + image)
 fake-news detection** on two public corpora, **FakeNewsNet (FNN)** and
 **Fakeddit**. It is organised into three stages: preparing the data, training the
-models, and a proof-of-concept demo UI.
+models, and a proof-of-concept demo Gradio UI.
 
 ## Documentation Map
 
 | Stage | Folder | What it covers |
 |-------|--------|----------------|
 | **Data preparation** | [`pipeline/`](pipeline/README.md) | Acquire FNN + Fakeddit, build the unified table, fetch/validate images, export the gated cohort TSVs. Runs locally. |
-| **Model training** | [`training/`](training/README.md) | Text, image, and fusion baselines on the cohort TSVs. Runs in Google Colab. |
-| **Demo UI** | [`ui/`](ui/README.md) | Gradio proof-of-concept for single text + image predictions. Runs locally. |
+| **Model training** | [`training/`](training/README.md) | Text, image, and fusion baselines on the cohort TSVs. |
+| **Gradio PoC** | [`ui/`](ui/README.md) | Gradio PoC for single text + image predictions. |
 
 ## Python environment
 
@@ -35,7 +35,7 @@ In the IDE, point the Python interpreter at `.venv/bin/python` (macOS/Linux) or
 | Requirements file | Used for |
 |-------------------|----------|
 | `pipeline/requirements.txt` | Data-preparation scripts and the EDA notebook (incl. the FakeNewsNet crawl, step `01`). |
-| `ui/requirements.txt` | The Gradio demo UI. |
+| `ui/requirements.txt` | The Gradio PoC. |
 
 Training has no requirements file — the Colab notebooks install version-pinned
 dependencies from a single source of truth (`colab_setup.PINNED_DEPENDENCIES`) via
@@ -44,8 +44,7 @@ build (see [`training/README.md`](training/README.md)).
 
 ## Upstream repositories
 
-The two source corpora are cloned under `pipeline/sources/` as nested Git repos
-(gitignored):
+The two source corpora should be cloned under `pipeline/sources/` as nested Git repositories. These are external to this repository but are required to produce the final cohort dataset.
 
 | Path | Source |
 |------|--------|
