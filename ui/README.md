@@ -10,7 +10,7 @@ Local demo that scores a single news-like social post (text and/or image) as lik
 |------|--------|
 | This repository | `git clone https://github.com/mpconsultsai/msc-project-csc-40098.git` then work from that folder. |
 | Python 3 | With a virtual environment at `.venv` (see root [README](../README.md)). |
-| Model files | Copy into `ui/models/` (not in git — see [Model checkpoints](#model-checkpoints-uimodels) below). |
+| Model files | Unpack **`msc-poc-model-weights.zip`** into the repo (creates `ui/models/`), or copy checkpoints manually — see [Model checkpoints](#model-checkpoints-uimodels). Not stored in git. |
 | Cohort data (optional) | Needed only for **Phase 1** Examples: `data/fake_news_final_*.tsv` and cohort images under `data/`. **Phase 2** Examples use files under `ui/assets/examples/`. |
 
 If a model’s files are missing, the app still starts and shows an **Artefacts missing** message instead of a prediction.
@@ -45,11 +45,23 @@ Pinned for reproducibility: **Gradio 6.20.0** (see `ui/requirements.txt` for the
 
 (Or: `.venv/bin/pip install -r ui/requirements.txt` without activating.)
 
-### 4. Copy the trained model files
+### 4. Install model checkpoints
 
-Place checkpoints in `ui/models/` as listed in [Model checkpoints](#model-checkpoints-uimodels). Typical source: Colab `My Drive/runs/`.
+Checkpoints are **not in git**. Use either option below.
 
-At minimum for a full demo you need DistilBERT’s `model/model.safetensors` (~255 MB) plus the other listed files. Without DistilBERT weights, TF–IDF and ResNet can still run if their files are present; fusion models will not.
+**Option A — submission zip (recommended for assessors).**  
+If you have `msc-poc-model-weights.zip` (submitted with the assessment), unpack it from the **repository root** so `ui/models/` is created in place:
+
+```bash
+unzip /path/to/msc-poc-model-weights.zip
+```
+
+The archive contains `ui/models/` with all six locked study models; no Colab training is required.
+
+**Option B — copy from training runs.**  
+After training in Colab, copy artefacts from `My Drive/runs/` into `ui/models/` as listed in [Model checkpoints](#model-checkpoints-uimodels).
+
+At minimum for a full demo you need DistilBERT’s `model/model.safetensors` (~255 MB) plus the other listed files. Without DistilBERT weights, TF–IDF and ResNet can still run if their files are present; fusion models will not.
 
 ### 5. Start the app
 
@@ -79,7 +91,7 @@ The first prediction for each model in a session is slower (lazy-loaded checkpoi
 
 ## Model checkpoints (`ui/models/`)
 
-This folder is **gitignored**. After training in Colab, copy artefacts from `My Drive/runs/` into `ui/models/`:
+This folder is **gitignored**. For assessment submission, frozen weights are provided as **`msc-poc-model-weights.zip`** — unpack from the repo root (see step 4 above). Alternatively, after training in Colab, copy artefacts from `My Drive/runs/` into `ui/models/`:
 
 ```
 ui/models/

@@ -11,7 +11,7 @@ models, and a proof-of-concept demo UI.
 |-------|--------|----------------|
 | **Data preparation** | [`pipeline/`](pipeline/README.md) | Acquire FNN + Fakeddit, build the unified table, fetch/validate images, export the gated cohort TSVs. Runs locally. |
 | **Model training** | [`training/`](training/README.md) | Text, image, and fusion baselines on the cohort TSVs. Runs in Google Colab. |
-| **Demo UI** | [`ui/`](ui/README.md) | Gradio proof-of-concept for single text + image predictions. Runs locally. |
+| **Demo UI** | [`ui/`](ui/README.md) | Gradio proof-of-concept for single text + image predictions. Runs locally. Model weights: unpack `msc-poc-model-weights.zip` at repo root (see `ui/README.md`). |
 
 ## Python environment
 
