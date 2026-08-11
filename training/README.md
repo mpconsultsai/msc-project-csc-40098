@@ -71,7 +71,7 @@ Colab cannot see files on your local machine. Upload them **once** to
   `data/processed/images/` (created by pipeline step **06**), then upload the zip:
 
 ```bash
-cd "/path/to/MSC Project/data"
+cd path/to/msc-project-csc-40098/data
 zip -r images.zip processed/images/ -x "*.log"
 ```
 

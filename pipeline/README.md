@@ -96,7 +96,7 @@ The pipeline has two phases: building the **unified working table** (steps
 From the project root:
 
 ```bash
-cd "/path/to/MSC Project"
+cd path/to/msc-project-csc-40098
 python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r pipeline/requirements.txt

@@ -53,7 +53,7 @@ Checkpoints are **not in git**. Use either option below.
 If you have `msc-poc-model-weights.zip` (submitted with the assessment), unpack it from the **repository root** so `ui/models/` is created in place:
 
 ```bash
-unzip /path/to/msc-poc-model-weights.zip
+unzip msc-poc-model-weights.zip
 ```
 
 The archive contains `ui/models/` with all six locked study models; no Colab training is required.
