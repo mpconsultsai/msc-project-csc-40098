@@ -8,7 +8,7 @@ Local demo that scores a single news-like social post (text and/or image) as lik
 
 | Need | Notes |
 |------|--------|
-| This repository | `git clone https://github.com/mpconsultsai/msc-project-csc-40098.git` then work from that folder. |
+| This repository | Clone into `path/to/msc-project-csc-40098` (see step 1 below). |
 | Python 3 | With a virtual environment at `.venv` (see root [README](../README.md)). |
 | Model files | Unpack **`msc-poc-model-weights.zip`** into the repo (creates `ui/models/`), or copy checkpoints manually — see [Model checkpoints](#model-checkpoints-uimodels). Not stored in git. |
 | Cohort data (optional) | Needed only for **Phase 1** Examples: `data/fake_news_final_*.tsv` and cohort images under `data/`. **Phase 2** Examples use files under `ui/assets/examples/`. |
@@ -22,8 +22,8 @@ If a model’s files are missing, the app still starts and shows an **Artefacts 
 ### 1. Clone the repository and open a terminal there
 
 ```bash
-git clone https://github.com/mpconsultsai/msc-project-csc-40098.git
-cd msc-project-csc-40098
+git clone https://github.com/mpconsultsai/msc-project-csc-40098.git path/to/msc-project-csc-40098
+cd path/to/msc-project-csc-40098
 ```
 
 (Skip the clone if you already have the project; still `cd` into its root.)

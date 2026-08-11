@@ -7,39 +7,12 @@ models, and a proof-of-concept demo Gradio UI.
 
 ## Getting started
 
-### 1. Clone the repository
-
 ```bash
-git clone https://github.com/mpconsultsai/msc-project-csc-40098.git
-cd msc-project-csc-40098
+git clone https://github.com/mpconsultsai/msc-project-csc-40098.git path/to/msc-project-csc-40098
+cd path/to/msc-project-csc-40098
 ```
 
-(Skip the clone if you already have the project; open a terminal at the repository root.)
-
-### 2. Run the Gradio PoC (assessors / demo)
-
-This is the usual entry point for marking: load the submitted checkpoints and score text + image posts locally.
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r ui/requirements.txt
-
-unzip msc-poc-model-weights.zip   # copy the submission zip to repo root first
-
-.venv/bin/python ui/gradio-ui.py
-```
-
-Open the URL printed in the terminal (typically `http://127.0.0.1:7860`). Full walkthrough, Phase 1/2 examples, and troubleshooting: [`ui/README.md`](ui/README.md).
-
-### 3. Reproduce data or training (optional)
-
-| Goal | Guide |
-|------|--------|
-| Rebuild the cohort from FNN + Fakeddit | [`pipeline/README.md`](pipeline/README.md) — install `pipeline/requirements.txt`, run numbered scripts locally |
-| Re-run baselines and fusion notebooks | [`training/README.md`](training/README.md) — cohort TSVs and `images.zip` on Google Drive; notebooks run in Colab |
-
-The **pipeline** and **demo UI** run locally; **model training runs in Colab**. Each local stage has its own `requirements.txt` (see [Python environment](#python-environment) below).
+Then open the stage guide you need in the [Documentation Map](#documentation-map) below (`pipeline/`, `training/`, or `ui/`).
 
 ## Documentation Map
 
