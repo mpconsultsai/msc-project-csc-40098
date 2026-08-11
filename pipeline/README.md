@@ -318,9 +318,6 @@ the text export, which keeps `fakenews.tsv` compact.
 | **FakeNewsNet** | News articles (PolitiFact + GossipCop); bodies via local crawl | Link rot, bot blocking, empty pages; ~23k index rows, crawl success varies |
 | **Fakeddit** | Reddit multimodal benchmark (title + `image_url`); official splits in filenames | `image_url` is metadata until downloaded and validated |
 
-**Citations:** FakeNewsNet — papers in `pipeline/sources/fakenewsnet/README.md`; Fakeddit
-— Nakamura et al. (see `pipeline/sources/fakeddit/README.md`).
-
 **Evaluation note:** Fakeddit benchmark-style evaluation uses `split_official`
 and the public test file. Joint cross-dataset splits need a documented
 `split_study` rule and are not the same protocol unless reported separately.
