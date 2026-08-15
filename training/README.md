@@ -52,7 +52,7 @@ Drive, and a short **per-session** setup that you run at the top of each
 notebook. All notebooks share the same `colab_setup.py` helper, so this setup is
 identical across notebooks.
 
-### Step 2.1 — One-time: upload files to Google Drive
+### Step 2.1 - One-time: upload files to Google Drive
 
 Colab cannot see files on your local machine. Upload them **once** to
 [Google Drive](https://drive.google.com) (same Google account you use in Colab).
@@ -115,14 +115,14 @@ notebooks create `My Drive/runs/` automatically when training finishes.
 > Keep authoritative metrics in `My Drive/runs/` (`metrics.json`, plots) — the GitHub
 > notebooks are a **code + reproducibility record**, not the primary results store.
 
-### Step 2.2 — Open a notebook and select the runtime
+### Step 2.2 - Open a notebook and select the runtime
 
 1. Open the desired notebook (see the [table in Section 3](#3-notebooks-and-modules)) in Google Colab.
 2. For the GPU notebooks (DistilBERT, image, fusion), select a GPU runtime:
    **Runtime → Change runtime type → T4 GPU**. The TF-IDF notebook runs on the
    default CPU runtime.
 
-### Step 2.3 — Run the per-session setup cells
+### Step 2.3 - Run the per-session setup cells
 
 Every notebook starts with the same setup cells. Run them top to bottom at
 the start of each session (and again after any Colab restart).
@@ -183,7 +183,7 @@ Use these arguments per notebook:
 | `training_image_resnet.ipynb` | `["image"]` | `["fake_news_final_image.tsv"]` | `True` | Yes |
 | `training_fusion.ipynb` | `["text", "image"]` | `["fake_news_final_text.tsv", "fake_news_final_image.tsv"]` | `True` | Yes |
 
-### Step 2.4 — Run the notebooks in order
+### Step 2.4 - Run the notebooks in order
 
 The fusion notebook reuses the DistilBERT and ResNet checkpoints, so run the
 single-modality notebooks first:
@@ -199,7 +199,7 @@ saves their results to `My Drive/runs/`. The fusion notebook calls
 run the fusion notebook before completing steps 2 and 3, it will report that the
 required checkpoints are missing.
 
-### Step 2.4a — Typical runtimes (Google Colab T4)
+### Step 2.4a - Typical runtimes (Google Colab T4)
 
 Runtimes vary with queue load and first-time image unzip. Indicative
 figures from the locked benchmark runs (full cohort, seed 42):
@@ -215,7 +215,7 @@ After **Runtime → Restart**, run cells **from the top** in order — later cel
 depend on `PROJECT_ROOT`, `train_df`, `val_df`, and fitted models from earlier
 cells.
 
-### Step 2.5 — How to run
+### Step 2.5 - How to run
 
 All Jupyter notebook steps are included; the **dataset** is not redistributed
 publicly (see the data-access and licensing note in
@@ -226,7 +226,7 @@ your `My Drive/` at the paths the setup helper expects.
 **Setup**
 
 1. Place all required assets in one Google Drive folder, following the
-   [Step 2.1](#step-21--one-time-prepare-google-drive): the four
+   [Step 2.1](#step-21---one-time-upload-files-to-google-drive): the four
    notebooks, `training/src/`, the cohort TSVs, and `images.zip`.
 2. Open a notebook, select **File → Save a copy in Drive**, choose the
    appropriate runtime ([Step 2.2](#step-22--open-a-notebook-and-select-the-runtime)),
