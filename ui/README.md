@@ -41,7 +41,7 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r ui/requirements.txt
 ```
 
-Pinned for reproducibility: **Gradio 6.20.0** (see `ui/requirements.txt` for the full PoC stack).
+Version: **Gradio 6.20.0** (see `ui/requirements.txt` for the full PoC stack).
 
 (Or: `.venv/bin/pip install -r ui/requirements.txt` without activating.)
 
@@ -49,14 +49,14 @@ Pinned for reproducibility: **Gradio 6.20.0** (see `ui/requirements.txt` for the
 
 Checkpoints are **not in git**. Use either option below.
 
-**Option A — submission zip (recommended for assessors).**  
-If you have `msc-poc-model-weights.zip` (submitted with the assessment), unpack it from the **repository root** so `ui/models/` is created in place:
+**Option A — submission zip.**  
+Unpack `msc-poc-model-weights.zip` from the **repository root** so `ui/models/` is created in place:
 
 ```bash
 unzip msc-poc-model-weights.zip
 ```
 
-The archive contains `ui/models/` with all six locked study models; no Colab training is required.
+The archive contains `ui/models/` with all six locked study models; no Colab training is required. This zip file is provided as part of the submission.
 
 **Option B — copy from training runs.**  
 After training in Colab, copy artefacts from `My Drive/runs/` into `ui/models/` as listed in [Model checkpoints](#model-checkpoints-uimodels).
@@ -83,15 +83,13 @@ Stop the server with `Ctrl+C` in the terminal.
 2. **Load Examples** → **Phase 1** (GossipCop real, PolitiFact fake) or **Phase 2** (Snopes viral claim, BBC Earth) — or enter your own text and/or image. A source note appears above **Analyse** when an example is loaded.
 3. **Image** tab — upload a file or paste a URL and click **Load** (direct image links and X photo pages).
 4. **Analyse** — verdict, P(fake), and for fusion models optional late-fusion scores or attention weights.
-5. **Reset** (top right) — clear inputs and restore the default model.
-
-The first prediction for each model in a session is slower (lazy-loaded checkpoints); later calls are usually faster.
+5. **Reset**  — clear inputs and restore the default model.
 
 ---
 
 ## Model checkpoints (`ui/models/`)
 
-This folder is **gitignored**. For assessment submission, frozen weights are provided as **`msc-poc-model-weights.zip`** — unpack from the repo root (see step 4 above). Alternatively, after training in Colab, copy artefacts from `My Drive/runs/` into `ui/models/`:
+This folder is **gitignored**.  See step 4 above on how to include the models detailed below:
 
 ```
 ui/models/
