@@ -226,7 +226,7 @@ your `My Drive/` at the paths the setup helper expects.
 **Setup**
 
 1. Place all required assets in one Google Drive folder, following the
-   [Step 2.1 layout](#step-21--one-time-prepare-google-drive): the four
+   [Step 2.1](#step-21--one-time-prepare-google-drive): the four
    notebooks, `training/src/`, the cohort TSVs, and `images.zip`.
 2. Open a notebook, select **File → Save a copy in Drive**, choose the
    appropriate runtime ([Step 2.2](#step-22--open-a-notebook-and-select-the-runtime)),
