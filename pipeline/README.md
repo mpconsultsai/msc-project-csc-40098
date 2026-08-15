@@ -287,7 +287,7 @@ nine core columns below (see
 | Column | Meaning |
 |--------|---------|
 | `dataset` | `fakeddit` \| `fakenewsnet` |
-| `sample_id` | Stable ID, e.g. `fd:{id}` / `fnn:{source}:{label}:{id}` |
+| `sample_id` | Unique identifier, e.g. `fd:{id}` / `fnn:{source}:{label}:{id}` |
 | `split_official` | Fakeddit: from source file; FNN: empty |
 | `domain` | Domain (FNN) / subreddit (Fakeddit) |
 | `label_binary` / `label_fine` | Project labels (Fakeddit `2_way` / `6_way`; FNN from path) |
