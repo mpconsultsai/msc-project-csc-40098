@@ -75,12 +75,6 @@ cd path/to/msc-project-csc-40098/data
 zip -r images.zip processed/images/ -x "*.log"
 ```
 
-> **Image payload QC.** A few publisher CDN files were saved as `.jpg` but contained
-> AVIF or JPEG2000 bytes. These passed local pipeline validation but broke Colab
-> training. Normalise to real JPEG before zipping. The
-> image and fusion notebooks call `verify_jpeg_payloads()` after load to catch
-> stale zips early.
-
 **3. Upload into `My Drive/training/src/`** — all `.py` files from this repo's
 `training/src/` folder (including `colab_setup.py`).
 
